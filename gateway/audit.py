@@ -17,15 +17,12 @@ The AUDIT_INCLUDE_PROMPT_TEXT setting exists to make the decision explicit and
 greppable, not to be enabled. If a debugging session ever needs prompt text, it
 needs it somewhere with a retention policy attached -- not here.
 
-Note also the corresponding upstream requirement: vLLM must run with
-`--no-enable-log-requests --no-enable-log-outputs`, or it keeps its own copy of
-every prompt regardless of what this file does (PRD §5.4).
-
-Not `--disable-log-requests`, which is what this said until Phase 1 measured it:
-that flag does not exist in vLLM 0.28.0 and `vllm serve` refuses to start with
-it. The replacement has inverted polarity, so no-retention is now the DEFAULT --
-both flags are still passed explicitly so the intent survives a future change of
-default.
+Note also the corresponding upstream requirement, carried over from
+bkn301-inference (PRD §5.4): the upstream engine must not keep its own copy of
+every prompt regardless of what this file does. vLLM's equivalent was
+`--no-enable-log-requests --no-enable-log-outputs`; QVAC Fabric's launch flags
+have not been audited for an analogous request/output-logging setting yet --
+docs/QVAC_FORK.md tracks this as unverified, not as "carries no such risk."
 """
 from __future__ import annotations
 

@@ -57,8 +57,11 @@ def _estimate_prompt_tokens(messages: list[dict]) -> int:
     Loading a tokenizer here would tie the gateway to a specific model's
     vocabulary -- and the gateway fronts a model allowlist, not one model. The
     estimate only has to be good enough to reject the obviously-oversized before
-    the GPU sees them; vLLM's own --max-model-len is the real limit, and it
-    errors precisely.
+    the GPU sees them; the upstream's own context-size configuration is the real
+    limit, and it errors precisely (vLLM's was --max-model-len; QVAC Fabric's is
+    serve.models.<alias>.config.ctx_size, defaulting to a documented 1024 unless
+    explicitly raised -- see docs/QVAC_FORK.md and stub/server.py's
+    context_length_exceeded fixture).
 
     It errs LOW (words < tokens), so it will not reject a legitimate request. It
     is a guard rail, not a budget.
@@ -92,7 +95,7 @@ async def chat_completions(
         raise _reject(status.HTTP_403_FORBIDDEN, "scope_denied", principal, model, started)
 
     # Model allowlist. Without it a caller names any model string and reaches
-    # whatever else that vLLM process serves.
+    # whatever else that upstream process serves.
     if model not in settings.ALLOWED_MODELS:
         raise _reject(status.HTTP_400_BAD_REQUEST,
                       "model_not_allowed", principal, model, started)
@@ -116,8 +119,16 @@ async def chat_completions(
     # malformed request into a 500 from the one layer whose entire job is
     # rejecting malformed requests before the GPU sees them. A non-positive
     # value is caught in the same place, because it is not a smaller request --
-    # vLLM has no sensible reading of it, and clamping UP to the ceiling would
-    # be the opposite of what the caller asked.
+    # the upstream has no sensible reading of it, and clamping UP to the
+    # ceiling would be the opposite of what the caller asked.
+    #
+    # THE DEFAULT INJECTED BELOW IS NOT FREE UNDER QVAC. MAX_COMPLETION_TOKENS
+    # defaults to 2048; QVAC Fabric's own documented context default is 1024
+    # (stub/server.py's StubState.ctx_size docstring). A real deployment MUST
+    # configure ctx_size well above MAX_COMPLETION_TOKENS plus a real prompt,
+    # or a caller that omits max_tokens entirely gets a context_length_exceeded
+    # 400 on every request -- not a QVAC bug, but a configuration trap this
+    # default did not have to worry about under vLLM's larger context.
     requested = body.get("max_tokens")
     if requested is None:
         body["max_tokens"] = settings.MAX_COMPLETION_TOKENS

@@ -33,9 +33,18 @@ probe is for.
 
 RUN IT TWICE
 ============
-Once through the gateway and once with `--direct` at vLLM. If the two disagree,
-the gateway is dropping `chat_template_kwargs` on the way through -- which would
-break B3's fix in production while every local test stayed green.
+Once through the gateway and once with `--direct` at the upstream. If the two
+disagree, the gateway is dropping `chat_template_kwargs` on the way through --
+which would break B3's fix in production while every local test stayed green.
+
+CARRIED OVER FROM bkn301-inference, MODEL-COUPLED NOT ENGINE-COUPLED
+=====================================================================
+This probe is about Qwen3's own chat-template `/think` parsing, not about
+vLLM or QVAC Fabric specifically -- it applies unchanged as long as the real
+deployment still targets a Qwen3 model (docs/QVAC_FORK.md checklist item 5;
+the actual GGUF/QVAC-quant model choice is not yet made). If that choice lands
+on a different model family, this script's premise needs revisiting, not just
+its `--direct` target.
 """
 from __future__ import annotations
 

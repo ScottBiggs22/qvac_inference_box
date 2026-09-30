@@ -1,4 +1,9 @@
-"""mTLS gateway->vLLM, against a real TLS handshake (PRD §5.4 item 1, §7 Phase 2).
+"""mTLS gateway->upstream, against a real TLS handshake (PRD §5.4 item 1, §7 Phase 2).
+
+Tests the gateway's OWN wiring only -- see the docstring below. Whether this
+terminates at QVAC Fabric directly or needs to move to a sidecar in front of
+it is a real, unresolved deployment question (docs/QVAC_FORK.md checklist item
+6): QVAC documents no TLS/mTLS support of its own.
 
 SCOPED HONESTLY -- SEE PRD §4.8
 ================================

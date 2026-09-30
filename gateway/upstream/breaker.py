@@ -55,9 +55,18 @@ class FailureKind(str, enum.Enum):
 #       28.9 tok/s per user (the cold-prefix p50 at 5 concurrent) plus a 6.45s
 #       TTFT p95 -- about 78s. The 120s read budget is 1.5x that, so a timeout is
 #       genuinely anomalous, but 1.5x is not enough margin to act on one.
+#       THESE ARE vLLM NUMBERS, carried forward as a starting point, NOT
+#       measured for QVAC Fabric. Its FCFS parallel-slot queueing (docs/
+#       QVAC_FORK.md) has a different tok/s-under-concurrency shape than
+#       vLLM's continuous batching -- this margin needs re-deriving from a
+#       real QVAC Phase 1 capture, the same way this one was derived.
 #
 #   SERVER_ERROR (1, trips on 6)
-#       vLLM's 503 is frequently scheduler back-pressure rather than brokenness.
+#       vLLM's 503 was frequently scheduler back-pressure rather than
+#       brokenness; whether QVAC Fabric's error responses carry an analogous
+#       "busy, not broken" signal is unverified (docs/QVAC_FORK.md). Carried
+#       forward as the conservative default: a 5xx counts against the
+#       breaker but does not trip it alone.
 #       With one retry, six upstream failures is about three client requests.
 #
 #   THROTTLED (0, never trips)
@@ -190,7 +199,7 @@ class ReplicaBreaker:
 
         A good probe is NOT sufficient on its own, and the stub proves why:
         `--stub-fail-after` makes chat 503 while /models keeps answering 200, and
-        a really wedged vLLM behaves identically because the API server is not
+        a really wedged engine behaves identically because the API server is not
         the engine loop. Hence two consecutive good probes AND no live wedge
         signal.
         """

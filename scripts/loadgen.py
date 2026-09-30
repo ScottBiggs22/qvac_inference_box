@@ -35,19 +35,26 @@ WHAT IT MEASURES, AND THE DEFINITIONS IT USES
                   what R1 (">=20 output tok/s per user") is about, and what
                   DevOps multiplies. Reported alongside, never replaced by, the
                   aggregate.
-  aggregate       total completion tokens / wall time of the level. Rises with
-                  concurrency as continuous batching does its job; per-user
-                  falls. Both matter and they are different questions.
+  aggregate       total completion tokens / wall time of the level. Under
+                  vLLM this rose with concurrency as continuous batching did
+                  its job, while per-user fell. UNVERIFIED FOR QVAC FABRIC:
+                  its FCFS `config.parallel: N` fixed decode slots (docs/
+                  QVAC_FORK.md) are a fundamentally different queueing model
+                  -- do not assume the same aggregate-vs-concurrency curve
+                  shape until a real capture says otherwise. Both numbers
+                  matter and they are different questions regardless of engine.
 
 PREFIX CACHING IS MODELLED, NOT ACCIDENTALLY DEFEATED OR EXPLOITED
 ==================================================================
-vLLM v1 has automatic prefix caching on by default (PRD §3.6). Sending N
+vLLM v1 had automatic prefix caching on by default (PRD §3.6). Sending N
 identical prompts would measure the cache, not the model; sending N wholly
 unrelated ones would measure a cache-miss path production never sees. Real
 traffic is a large byte-identical system-and-knowledge block plus a short
 unique query, so that is the default shape here: a shared padded prefix and a
 per-request nonce. `--unique-prefix` forces total misses for a worst-case
-prefill number.
+prefill number. WHETHER QVAC FABRIC HAS AN ANALOGOUS PREFIX/KV CACHE AT ALL IS
+UNVERIFIED (docs/QVAC_FORK.md) -- this modelling is kept as the same
+conservative default, not because it is known to matter under QVAC too.
 
 SYNTHETIC BY CONSTRUCTION
 =========================
@@ -157,9 +164,12 @@ async def one_request(client: httpx.AsyncClient, url: str, body: dict,
     """One streamed completion, timed at the frame level.
 
     Timing is taken on the first frame that carries actual CONTENT, not the
-    first frame of any kind: vLLM (like the stub) sends an opening frame with
-    an empty-string delta to establish the role, and treating that as the first
-    token would report a TTFT of nearly zero.
+    first frame of any kind: vLLM (like the stub) sent an opening frame with
+    an empty-string delta to establish the role, and treating that as the
+    first token would report a TTFT of nearly zero. WHETHER QVAC FABRIC'S SSE
+    FRAMING MATCHES THIS SHAPE IS UNVERIFIED (docs/QVAC_FORK.md checklist
+    item 4) -- this logic assumes it does until a real capture confirms or
+    corrects it.
     """
     res = RequestResult(level=level, worker=worker, ok=False)
     t0 = time.perf_counter()
@@ -402,12 +412,12 @@ def main() -> int:
         ),
     )
     ap.add_argument("--url", default="http://127.0.0.1:8080/v1",
-                    help="Gateway /v1 base. Use the vLLM /v1 with --direct.")
+                    help="Gateway /v1 base. Use the upstream's own /v1 with --direct.")
     ap.add_argument("--direct", action="store_true",
                     help="Recorded in the header: this run bypassed the gateway. "
                          "Pair with a gateway run to get the gateway's overhead.")
     ap.add_argument("--api-key", default="",
-                    help="Throwaway gateway key, or vLLM's static --api-key.")
+                    help="Throwaway gateway key, or the upstream's static --api-key.")
     ap.add_argument("--model", default="Qwen/Qwen3-8B-AWQ")
     ap.add_argument("--levels", default="1,3,5,8",
                     help="Concurrency levels, ascending. Default 1,3,5,8 (PRD §7).")
@@ -419,7 +429,10 @@ def main() -> int:
                          "short prompts do not test it at all.")
     ap.add_argument("--max-tokens", type=int, default=512)
     ap.add_argument("--model-len", type=int, default=8192,
-                    help="Server's --max-model-len, for the pre-flight check below.")
+                    help="Server's configured context size (vLLM's --max-model-len; "
+                         "QVAC Fabric's ctx_size, whose own default is a much "
+                         "smaller 1024 -- see docs/QVAC_FORK.md), for the "
+                         "pre-flight check below.")
     ap.add_argument("--unique-prefix", action="store_true",
                     help="Defeat prefix caching for a worst-case prefill figure.")
     ap.add_argument("--warmup", type=int, default=2,
@@ -438,7 +451,8 @@ def main() -> int:
     if args.ctx_tokens + args.max_tokens > args.model_len:
         print(f"ERROR: ctx-tokens ({args.ctx_tokens}) + max-tokens "
               f"({args.max_tokens}) = {args.ctx_tokens + args.max_tokens} exceeds "
-              f"--model-len {args.model_len}. vLLM will reject every request.",
+              f"--model-len {args.model_len}. The upstream will reject every "
+              f"request (QVAC Fabric: context_length_exceeded).",
               file=sys.stderr)
         return 2
 

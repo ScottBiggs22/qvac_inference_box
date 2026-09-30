@@ -32,9 +32,9 @@ async def readyz(response: Response) -> dict:
     """Readiness. Red only when no upstream replica is reachable.
 
     Note the aggregation: ANY reachable replica means ready. The gateway can
-    still serve if one of several vLLM instances is down -- that is what having
-    replicas is for -- so a per-replica failure belongs in the router's health
-    tracking and in an alert, not in this endpoint's verdict.
+    still serve if one of several upstream instances is down -- that is what
+    having replicas is for -- so a per-replica failure belongs in the router's
+    health tracking and in an alert, not in this endpoint's verdict.
 
     AN OPEN BREAKER DOES NOT MAKE THIS RED, deliberately, and the breaker state
     is reported as a field instead. The gateway is not the broken component:

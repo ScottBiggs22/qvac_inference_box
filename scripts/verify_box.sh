@@ -57,9 +57,12 @@ hygiene_scan() {
 
   # A scan of a directory that does not exist finds nothing and reports clean.
   # That is not a pass, it is a vacuous check -- and it very nearly shipped:
-  # the default target was /workspace, which the vllm/vllm-openai image does
-  # not have (its home is /root), so on the first real box this function would
-  # have printed three PASS lines having examined no files at all.
+  # the default target was /workspace, which the old vllm/vllm-openai image did
+  # not have (its home was /root), so on the first real box this function would
+  # have printed three PASS lines having examined no files at all. THE SAME
+  # QUESTION IS UNRESOLVED FOR WHATEVER QVAC FABRIC IMAGE IS EVENTUALLY PINNED
+  # (docs/QVAC_FORK.md) -- re-verify WORKSPACE against its actual home
+  # directory before trusting this check on real hardware.
   if [ ! -d "$root" ]; then
     bad "scan target '$root' does not exist -- nothing was checked. Set WORKSPACE to the directory the payload was extracted into."
     return
@@ -276,9 +279,12 @@ case "$name" in
 esac
 
 # ── VRAM ─────────────────────────────────────────────────────────────────────
-# 24 GB reports as ~23028 MiB. Anything materially below that is a partition,
-# and on a half card the AWQ config has ~4 GiB of KV cache: 5x4k works, 5x8k
-# does not. See PRD §4.4(a).
+# 24 GB reports as ~23028 MiB. Anything materially below that is a partition.
+# THE "5x4k works, 5x8k does not" MATH BELOW WAS vLLM's AWQ CONFIG, carried
+# forward as a placeholder -- QVAC Fabric's real quant choice, ctx_size, and
+# parallel-slot count (and therefore its own KV-cache math) are not yet
+# decided (docs/QVAC_FORK.md checklist item 5). See PRD §4.4(a) for the
+# original vLLM derivation this needs to be redone against.
 mib=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
 if   [ "$mib" -ge 22000 ]; then pass "VRAM ${mib} MiB (full 24 GB card)"
 elif [ "$mib" -ge 11000 ]; then bad "VRAM ${mib} MiB -- looks like a HALF card. 5x8k context is unreachable (PRD §4.4a)"
@@ -286,8 +292,11 @@ else                            bad "VRAM ${mib} MiB -- partitioned card, weight
 fi
 
 # ── Nothing else on the card ─────────────────────────────────────────────────
-# vLLM pre-allocates its KV cache at startup, so another tenant does not degrade
-# it -- it makes it fail at boot.
+# vLLM pre-allocated its KV cache at startup, so another tenant did not degrade
+# it -- it made it fail at boot. WHETHER QVAC FABRIC'S MEMORY MODEL SHARES
+# THIS PROPERTY IS UNVERIFIED (docs/QVAC_FORK.md) -- this check is kept as the
+# conservative default (assume a shared card is unsafe) until real hardware
+# says otherwise.
 used=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
 if [ "$used" -lt 500 ]; then pass "card is idle (${used} MiB used)"
 else                         warn "${used} MiB already in use -- something else is on this card"

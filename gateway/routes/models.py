@@ -1,4 +1,4 @@
-"""/v1/models — the allowlist, not a passthrough of what vLLM happens to serve.
+"""/v1/models — the allowlist, not a passthrough of what the upstream happens to serve.
 
 Reporting the upstream's own list would advertise models a caller is not
 permitted to use, and an OpenAI client that picks the first model it is offered

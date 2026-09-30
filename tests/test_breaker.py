@@ -24,7 +24,9 @@ def _b() -> ReplicaBreaker:
 
 class TestTripThresholds:
     def test_five_server_errors_do_not_trip_but_six_do(self):
-        """vLLM's 503 is often scheduler back-pressure, not brokenness.
+        """A 503 is often scheduler back-pressure, not brokenness (vLLM's was;
+        whether QVAC Fabric's carries the same meaning is unverified, docs/
+        QVAC_FORK.md -- this weighting is the conservative default either way).
 
         Weight 1 each, so six upstream failures -- roughly three client requests
         once one retry is in play.
@@ -139,8 +141,8 @@ class TestOpenAndReclose:
         """/models answering 200 is a WEAK probe, and the stub proves it.
 
         --stub-fail-after leaves /models green while chat 503s, and a really
-        wedged vLLM behaves identically, because the API server is not the engine
-        loop.
+        wedged engine behaves identically, because the API server is not the
+        engine loop.
         """
         b = _b()
         b.record_failure(FailureKind.CONNECT, now=0.0)
