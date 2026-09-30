@@ -21,7 +21,7 @@ Read these three first, in order:
   Phase 1 measurement session; §6 is what is deliberately not built yet and
   what Phase 1 changed about each item.
 - `docs/PHASE1_RESULTS.md` — the measurements, with raw artefacts in
-  `results/phase1-vastai-a10/`. §8 lists ten corrections the measurements forced
+  `results/vllm-baseline/phase1-vastai-a10/`. §8 lists ten corrections the measurements forced
   into the PRD.
 - `docs/INFERENCE_SERVICE_PRD.md` — rev 3, the design source of truth. It carries
   the feasibility analysis, memory budget, security design, the DevOps deployment
@@ -78,7 +78,7 @@ the file:line for each, and what Phase 1 measured that feeds into it.
    with no endpoint. Keep `keyid` out of the labels (unbounded cardinality, and
    it puts tenant identity on an unauthenticated scrape surface). The real vLLM
    series names are captured from the live server in
-   `results/phase1-vastai-a10/vllm-metrics-final.txt` — write against those, not
+   `results/vllm-baseline/phase1-vastai-a10/vllm-metrics-final.txt` — write against those, not
    against the doc.
 2. **Robust handling — circuit breaker + health-aware routing.**
    `UpstreamPool.pick()` is round-robin and `health()` is unused by the router.

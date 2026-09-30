@@ -1,11 +1,19 @@
 # Phase 1 measurements — rented A10
 
+> **PRE-FORK vLLM BASELINE.** This document and its raw artefacts
+> (`results/vllm-baseline/`) are kept unchanged from `bkn301-inference` as the
+> numeric baseline this fork's QVAC Fabric measurements are meant to be
+> compared against (docs/QVAC_FORK.md) — not as current numbers for this
+> repo's engine. A QVAC-equivalent capture belongs in a new
+> `docs/PHASE1_RESULTS_QVAC.md` following the same methodology, not as an edit
+> to this file.
+
 **Status:** COMPLETE — measured 2026-09-10
 **Box:** vast.ai instance `50504688`, machine `123534`, offer `47574078`, host `209278`, Illinois US
 **Cost:** $0.2417/hr GPU + storage = $0.26/hr all-in. **Total spend $0.117** for the session.
 **Operator:** scott.biggs@bkn301.com
 **Procedure:** `docs/VAST_AI_RUNBOOK.md` rev 2
-**Raw artefacts:** `results/phase1-vastai-a10/`
+**Raw artefacts:** `results/vllm-baseline/phase1-vastai-a10/`
 
 ---
 

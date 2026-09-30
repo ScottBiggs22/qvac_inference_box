@@ -1,5 +1,12 @@
 # Phase 2 GPU session — argon2-under-load and the wedge window, measured on a rented L4
 
+> **PRE-FORK vLLM BASELINE.** Kept unchanged from `bkn301-inference`, including
+> its finding that vLLM's own `/metrics`-based wedge signal never actually
+> tripped during a real freeze — the direct motivation for this fork's
+> `gateway/upstream/wedge.py` replacement (docs/QVAC_FORK.md). A QVAC-Fabric
+> repeat of this same experiment (`kill -STOP` the engine, watch what the
+> gateway-side signal does) is checklist item 2 there, not yet done.
+
 **Status:** COMPLETE — measured 2026-09-14/15
 **Box:** vast.ai instance `51076943`, machine `109523`, offer `49883396`, Utah US
 **Card:** NVIDIA L4, 23034 MiB, driver 595.84, CUDA 13.2, 72 W, compute capability
@@ -10,7 +17,7 @@ overridden blindly.
 (balance $4.880 → $4.732). Instance destroyed, SSH key removed from the
 account and locally, volumes confirmed empty.
 **Operator:** scott.biggs@bkn301.com
-**Raw artefacts:** `results/phase2-l4-wedge-argon2/`
+**Raw artefacts:** `results/vllm-baseline/phase2-l4-wedge-argon2/`
 
 ---
 
@@ -221,7 +228,7 @@ window this system was designed around.
 ## 3. Housekeeping
 
 - `scripts/pack_for_box.sh` correctly refused to pack on its first invocation
-  — its `.jsonl$` deny-list rule caught `results/phase1-vastai-a10/*.jsonl`,
+  — its `.jsonl$` deny-list rule caught `results/vllm-baseline/phase1-vastai-a10/*.jsonl`,
   our own already-safe Phase 1 outputs, a genuine false positive against a
   rule designed for real app telemetry. Resolved by moving `results/` out of
   the working tree for the pack (git-tracked, so trivially restorable) rather

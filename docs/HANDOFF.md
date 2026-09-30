@@ -268,7 +268,7 @@ hardcodes `TOKENIZER_DIR=./models/qwen2.5-tokenizer`, which overrides the
 ## 5b. Phase 1 — DONE. Measured on a rented A10, 2026-09-10.
 
 Full record: **`docs/PHASE1_RESULTS.md`**. Raw artefacts:
-`results/phase1-vastai-a10/`. Session cost **$0.117**; instance destroyed, keys
+`results/vllm-baseline/phase1-vastai-a10/`. Session cost **$0.117**; instance destroyed, keys
 discarded, nothing left on the vast.ai account.
 
 **Box:** full-card NVIDIA A10, 23028 MiB, driver 595.84, CUDA 13.2, compute
@@ -393,7 +393,7 @@ clean, both image targets still build.
    to the allowlist, `reason` to a frozenset, replicas by index not URL) —
    the same reasoning that already kept `keyid` out, generalised. Three real
    parser traps closed, each verified against
-   `results/phase1-vastai-a10/vllm-metrics-final.txt`: `prometheus_client`
+   `results/vllm-baseline/phase1-vastai-a10/vllm-metrics-final.txt`: `prometheus_client`
    strips `_total` from counter *family* names (the sample keeps it — a
    family-name lookup silently finds nothing); every counter has a `_created`
    gauge sibling holding a boot timestamp that never moves (a prefix match
@@ -600,7 +600,7 @@ log is. Label on `status` / `model` / `auth_method`.
 
 Also needs a scraper for vLLM's own `/metrics` to compute the wedge signature
 from `PROBE_CONTRACT.md` §4. **The real series names are now known** — captured
-in `results/phase1-vastai-a10/vllm-metrics-final.txt` from the live server, so
+in `results/vllm-baseline/phase1-vastai-a10/vllm-metrics-final.txt` from the live server, so
 this can be written against reality rather than against the doc:
 `vllm:num_requests_running`, `vllm:num_requests_waiting`,
 `vllm:num_requests_waiting_by_reason{reason=capacity|deferred}`,

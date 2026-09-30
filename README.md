@@ -1,12 +1,21 @@
 # bkn301-qvac-inference
 
 An authenticating, OpenAI-compatible gateway that sits in front of a
-self-hosted **vLLM** server running **Qwen3-8B-AWQ** on a single 24 GiB
-NVIDIA A10 GPU. It exists because vLLM's OpenAI-compatible server has exactly
-one authentication primitive — `--api-key`, a single static shared secret —
-and **no per-tenant identity, no rate limiting, no quotas, no per-key audit
-trail and no request-size limits**. vLLM must never be the edge; everything
+self-hosted **QVAC Fabric** server on a single 24 GiB NVIDIA A10 GPU. It
+exists because an OpenAI-compatible engine server typically has exactly one
+authentication primitive at most — a single static shared secret — and **no
+per-tenant identity, no rate limiting, no quotas, no per-key audit trail and
+no request-size limits**. The engine must never be the edge; everything
 security-shaped for this service lives here instead.
+
+**This is a fork of `bkn301-inference`**, which fronts vLLM instead. That
+swap is a management-directed business requirement, not a technical
+improvement — `bkn301-inference`'s `main` already meets every PRD KPI on
+vLLM, and this fork should be expected to regress on capacity/concurrency
+until proven otherwise. **Read [`docs/QVAC_FORK.md`](docs/QVAC_FORK.md)
+first** — it has the full disposition of what changed vs. the vLLM version,
+what's degraded, and the checklist of what still needs measuring on real
+hardware.
 
 The gateway is consumed by a fintech platform ("FirstData")'s C#/.NET API
 (`baas-poc-templates`) as a third LLM backend, alongside `llamacpp` and
@@ -30,15 +39,15 @@ Gateway  ← this repo
   │  authN/authZ · request validation · model allowlist
   │  metadata-only audit · SSE passthrough
   ▼  private subnet
-vLLM replicas (no public IP, --no-enable-log-requests)
+QVAC Fabric replicas (no public IP)
 ```
 
 The gateway itself is a single async FastAPI app (`gateway/main.py`), CPU/IO
-bound — it does not need a GPU. vLLM is the GPU-bound piece it fronts.
+bound — it does not need a GPU. QVAC Fabric is the GPU-bound piece it fronts.
 
 | Path | Responsibility |
 |---|---|
-| `gateway/main.py` | App factory, lifespan-managed startup/shutdown; runs background tasks for metrics scraping, breaker probing, and event-loop lag monitoring. |
+| `gateway/main.py` | App factory, lifespan-managed startup/shutdown; runs background tasks for breaker probing and event-loop lag monitoring. |
 | `gateway/config.py` | Env-vars-only settings (no cloud SDK, ever — see [Configuration](#configuration)). |
 | `gateway/auth/keys.py` | Argon2id-hashed API keys (`bkn_live_<keyid>_<secret>`), expiry, revocation, per-key token budget and concurrency limits. |
 | `gateway/auth/jwt.py` | Asymmetric-only JWT validation (RS256) — the gateway can verify tokens but never mint them. |
@@ -46,7 +55,7 @@ bound — it does not need a GPU. vLLM is the GPU-bound piece it fronts.
 | `gateway/routes/health.py`, `models.py`, `metrics.py` | `/healthz`, `/readyz`, `/v1/models`, `/metrics`. |
 | `gateway/upstream/client.py` | Replica pool, shared `httpx.AsyncClient`, streaming passthrough, bounded retries with jitter, mTLS wiring. |
 | `gateway/upstream/breaker.py` | Per-replica circuit breaker (weighted consecutive-failure score, not a rate). |
-| `gateway/upstream/metrics_scraper.py` | Scrapes each vLLM replica's own `/metrics` to derive a "wedge" (frozen-engine) signal. |
+| `gateway/upstream/wedge.py` | Derives a "wedge" (frozen-engine) signal from the gateway's own dispatch/settlement bookkeeping — QVAC Fabric exposes no `/metrics` to scrape the way vLLM did; see `docs/QVAC_FORK.md`. |
 | `gateway/quota.py` | Token-budget and in-flight-concurrency enforcement, wired into `chat.py`. |
 | `gateway/audit.py` | Metadata-only audit log writer — never prompt/completion text. |
 | `gateway/metrics.py` | Prometheus metric definitions + ASGI middleware. |
@@ -72,10 +81,13 @@ bound — it does not need a GPU. vLLM is the GPU-bound piece it fronts.
 
 ## Deployment model
 
-vLLM needs a **whole 24 GiB A10 GPU per replica** — no MIG, no fractional/vGPU
-sharing, because vLLM pre-allocates KV cache and sharing fails at boot. The
-gateway itself is IO-bound and runs anywhere; scale it via replicas, not
-worker processes (`--workers 1` in the shipped image).
+Carried over unverified from the vLLM version: a **whole 24 GiB A10 GPU per
+replica** — no MIG, no fractional/vGPU sharing. vLLM's version of this rule
+came from KV-cache pre-allocation at startup (a second pod on the same card
+failed at boot); whether QVAC Fabric's memory model forces the same
+constraint is unverified (`docs/QVAC_FORK.md`). The gateway itself is IO-bound
+and runs anywhere; scale it via replicas, not worker processes (`--workers 1`
+in the shipped image).
 
 ### Local development, no GPU needed
 
@@ -140,11 +152,16 @@ DevOps's own answers recorded in PRD §4.1 and §4.4, not from guesswork.
   spec. A10 has no MIG (that's A100/A30/H100 only), so nothing else —
   no second container, no graphics workload, no other `nvidia-smi`-visible
   tenant — may share the card.
-- **Driver/CUDA.** vLLM `v0.28.0` is a CUDA 13.0 build; a CUDA-12.x-only
-  driver cannot run it. Verified working combination: driver 595.84 / CUDA 13.2.
-- **Disk.** ≥30 GB free (~6 GB of model weights, plus image layers and the
-  HF cache).
-- **Network.** vLLM replicas get **no public IP** — private subnet only,
+- **Driver/backend.** UNVERIFIED for QVAC Fabric (`docs/QVAC_FORK.md`
+  checklist): which backend build (Vulkan vs. CUDA, both supported on this
+  same NVIDIA hardware) and which driver combination is actually chosen and
+  tested has not been decided. vLLM's own requirement here was a CUDA 13.0
+  build needing driver 595.84+/CUDA 13.2 — informative history, not a QVAC
+  requirement.
+- **Disk.** ≥30 GB free, pending the real model size once the quant/format
+  choice is made (`docs/QVAC_FORK.md` checklist item 5) — 6 GB was vLLM's
+  AWQ weights plus the HF cache, not necessarily QVAC's footprint.
+- **Network.** Replicas get **no public IP** — private subnet only,
   reachable solely by the gateway.
 - **Fault-domain placement (OCI).** Put the dev VM in a different fault
   domain from every production VM, and the two production VMs in different
@@ -158,28 +175,36 @@ DevOps's own answers recorded in PRD §4.1 and §4.4, not from guesswork.
   only — a green Azure run should not be read as evidence the tok/s target is
   met if its card isn't production-identical (PRD §4.4c, §8 Q3).
 
-### Running vLLM
+### Running QVAC Fabric
 
-- Image: `vllm/vllm-openai:v0.28.0`, model pinned by commit hash
-  (`--revision=4da05a8edb55c6046cce958586c33b61da07bb79`) rather than a
-  moving tag.
-- Launch flags: `--model=Qwen/Qwen3-8B-AWQ --max-model-len=8192
-  --gpu-memory-utilization=0.90 --no-enable-log-requests
-  --no-enable-log-outputs`. **Not** `--disable-log-requests` — that flag
-  doesn't exist in `v0.28.0` and `vllm serve` refuses to start with it.
-- Probes: apply `deploy/k8s/probes.yaml` as-is for the vLLM Deployment — it
-  targets vLLM's own `/health`, not the gateway's. The numbers are measured,
-  not placeholders: `startupProbe` gives a 300s boot budget (60 × 5s) against
-  a measured 153s cold start / 45s warm restart — do not tighten this, a
-  120s budget boot-loops a cold pod. `readinessProbe` checks engine health
-  only, deliberately never queue depth (a busy-but-healthy replica pulled
-  from rotation during a traffic spike takes the whole service down with it —
-  load-aware routing belongs in the gateway, which already tracks in-flight
-  requests). `livenessProbe` is a last resort (~60s to restart) and is never
-  a test generation, since a legitimate decode can take 10s+ under load. Full
-  rationale in `docs/PROBE_CONTRACT.md`.
+**Everything in this section is an unverified placeholder** —
+`docs/QVAC_FORK.md`'s checklist tracks each item, and none should be treated
+as measured or final until that checklist is closed:
+
+- Image/tag: not yet chosen or pinned. vLLM's equivalent was
+  `vllm/vllm-openai:v0.28.0`, model pinned by commit hash — the same
+  discipline (pin the image, pin the model revision) should carry over once a
+  real image exists.
+- Launch flags: `deploy/k8s/probes.yaml`'s `args:` has the current best guess
+  (`--openai --model=<alias> --ctx-size=8192 --parallel=1`) — the model
+  alias, quant format, and parallel-slot count are all placeholders pending
+  checklist item 5. **8192, not QVAC's raw 1024 default** — the PRD's context
+  requirement, and `gateway/routes/chat.py`'s `MAX_COMPLETION_TOKENS`
+  injection (2048) would break against the raw default.
+- Whether QVAC Fabric needs an analogous `--no-enable-log-requests`-style
+  flag to avoid keeping its own copy of every prompt is unaudited (checklist
+  item 8) — `gateway/audit.py`'s metadata-only design depends on the upstream
+  not silently retaining prompt text.
+- Probes: apply `deploy/k8s/probes.yaml` — it targets `/v1/models` (QVAC
+  Fabric documents no `/health` endpoint at all), not the gateway's own
+  probes. Every timing number is an unmeasured placeholder, unlike the vLLM
+  manifest's which had a real 153s cold / 45s warm measurement behind them.
+  Whether a kubelet `httpGet` probe needs QVAC's bearer-auth header is also
+  unresolved (checklist item 7). Mechanism/reasoning in `docs/PROBE_CONTRACT.md`.
 - HA target: ≥2 production replicas, in different fault domains, listed
-  together in the gateway's `UPSTREAM_URLS`.
+  together in the gateway's `UPSTREAM_URLS` — unchanged from the vLLM plan,
+  but QVAC's real per-replica concurrent-user capacity (checklist item 3) is
+  what determines how many replicas that target actually needs.
 
 ### Running the gateway
 
@@ -193,11 +218,12 @@ DevOps's own answers recorded in PRD §4.1 and §4.4, not from guesswork.
   gateway is IO-bound, so scale by adding replicas, not workers. Exposes
   `8080`. Already runs non-root.
 - **No Kubernetes manifest exists yet for the gateway itself** —
-  `deploy/k8s/probes.yaml` is vLLM's only. Whoever deploys this needs to
-  write a Deployment + Service (+ Ingress/edge wiring) for the gateway, with
-  its liveness/readiness pointed at the gateway's **own** `/healthz` and
-  `/readyz` — not vLLM's `/health` (a mix-up the PRD explicitly calls out as
-  having happened once already).
+  `deploy/k8s/probes.yaml` is the upstream engine's only. Whoever deploys
+  this needs to write a Deployment + Service (+ Ingress/edge wiring) for the
+  gateway, with its liveness/readiness pointed at the gateway's **own**
+  `/healthz` and `/readyz` — not the upstream's `/v1/models` (a mix-up the
+  PRD explicitly calls out as having happened once already, back when the
+  upstream endpoint in question was vLLM's `/health`).
 - Edge: TLS termination and rate-limiting/WAF sit in front of the gateway
   (Cloudflare Tunnel or LB+WAF) — the gateway itself should have no public
   exposure beyond that edge. `/metrics` is unauthenticated by design, so it
@@ -212,26 +238,29 @@ as env vars or mounted files the env vars point at:
 
 | Variable | What it is |
 |---|---|
-| `UPSTREAM_API_KEY` | vLLM's static shared secret — private-subnet-only, never leaves it |
+| `UPSTREAM_API_KEY` | The upstream's static shared secret (QVAC Fabric's `--api-key`) — private-subnet-only, never leaves it |
 | `API_KEY_PEPPER` | Argon2id pepper, generated per environment, never committed, never stored beside the key store |
 | `JWT_PUBLIC_KEY` | The issuing API's asymmetric signing public key (RS256) — the gateway must never hold a private or symmetric key |
-| `UPSTREAM_CLIENT_CERT_PATH` / `UPSTREAM_CLIENT_KEY_PATH` / `UPSTREAM_CA_BUNDLE_PATH` | mTLS material for gateway→vLLM — sourced from whatever CA issues certs on the private subnet |
+| `UPSTREAM_CLIENT_CERT_PATH` / `UPSTREAM_CLIENT_KEY_PATH` / `UPSTREAM_CA_BUNDLE_PATH` | mTLS material for gateway→upstream — sourced from whatever CA issues certs on the private subnet. **QVAC Fabric documents no TLS/mTLS support of its own** — whether this terminates at QVAC directly or at a sidecar in front of it is unresolved, `docs/QVAC_FORK.md` checklist item 6 |
 | `API_KEY_STORE_PATH` | Writable path for the per-environment API key registry (generated, not committed) |
 | `AUDIT_LOG_PATH` | Writable/persisted path for the metadata-only audit log |
 
 ### Observability to wire up
 
-- Prometheus scrape targets: the gateway's own `/metrics` (behind a network
-  policy) and each vLLM replica's `/metrics` directly — the gateway doesn't
-  re-export vLLM's series, only derives a wedge signal from them.
+- Prometheus scrape target: the gateway's own `/metrics` (behind a network
+  policy). **There is no upstream `/metrics` to also scrape** — QVAC Fabric
+  documents no metrics endpoint at all, unlike vLLM. The wedge signal is
+  derived entirely from the gateway's own dispatch/settlement bookkeeping
+  (`gateway/upstream/wedge.py`), not from anything scraped off the upstream.
 - Alerts worth having from day one: tok/s/user below target, TTFT p95,
-  KV-cache utilization, circuit-breaker trips, and
-  `bkn301_gateway_upstream_wedge_stall_seconds` crossing its (currently
-  estimated, not measured) window.
-- The PRD also recommends a small sidecar that scrapes vLLM's `/metrics` and
-  fails `/healthz` if the wedge signature holds for ~120s+, as an automated
-  backstop behind the gateway's own circuit breaker (the primary defense).
-  **Not built yet** — see [Current status](#current-status).
+  circuit-breaker trips, and `bkn301_gateway_upstream_wedge_stall_seconds`
+  crossing its (currently estimated, not measured) window. (KV-cache
+  utilization was a vLLM-specific series with no QVAC equivalent to alert on.)
+- The old PRD recommended a small sidecar scraping vLLM's `/metrics` as an
+  automated backstop behind the gateway's own circuit breaker. That specific
+  design has no QVAC equivalent to build (nothing to scrape) — the honest gap
+  it leaves (a wedge with zero real traffic against it is invisible) is
+  tracked as `docs/QVAC_FORK.md` checklist item 9 instead.
 
 ### Open questions this repo can't close alone
 
@@ -242,8 +271,10 @@ placement are real — see PRD §8 for the full list:
   `NVadsA10_v5` partition? (Highest priority.)
 - Can the four VMs (dev/staging/2×prod) actually be placed in different
   fault domains, or do they land on the same physical node?
-- Has vLLM been validated on an Azure vGPU (NVads/GRID) profile at all? Not
-  yet, as of this writing — treat it as a spike, not a given, if Azure is firm.
+- Has the chosen engine been validated on an Azure vGPU (NVads/GRID) profile
+  at all? Not yet, as of this writing (true of vLLM before, and doubly true
+  of QVAC Fabric, which has no production track record on this stack at all)
+  — treat it as a spike, not a given, if Azure is firm.
 - What's the network path from the consuming app to the gateway — same-VCN,
   or a tunnel/VPN/cross-region hop? This is currently the single largest
   unknown in the latency budget.
@@ -264,12 +295,12 @@ Knob categories:
 | Category | Examples |
 |---|---|
 | Server | `GATEWAY_HOST`, `GATEWAY_PORT` |
-| Upstream vLLM | `UPSTREAM_URLS` (comma-separated replicas), `UPSTREAM_API_KEY`, connect/read timeouts, mTLS cert/key/CA paths |
+| Upstream QVAC Fabric | `UPSTREAM_URLS` (comma-separated replicas), `UPSTREAM_API_KEY`, connect/read timeouts, mTLS cert/key/CA paths |
 | Resilience | `BREAKER_ENABLED`, `BREAKER_OPEN_SEC`, `BREAKER_PROBE_TICK_SEC` |
 | Authentication | `API_KEY_STORE_PATH`, `API_KEY_PEPPER`, `AUTH_VERIFY_CONCURRENCY`, JWT public key/issuer/audience |
 | Request validation | `ALLOWED_MODELS`, `MAX_BODY_BYTES`, `MAX_COMPLETION_TOKENS`, `MAX_PROMPT_TOKENS` |
 | Audit | `AUDIT_LOG_PATH`, `AUDIT_INCLUDE_PROMPT_TEXT` (must stay `false`) |
-| Observability | `METRICS_ENABLED`, `UPSTREAM_METRICS_POLL_SEC`, `UPSTREAM_WEDGE_WINDOW_SEC` |
+| Observability | `METRICS_ENABLED`, `UPSTREAM_WEDGE_WINDOW_SEC` |
 
 `/metrics` is **unauthenticated on the main port**, like any Prometheus
 target — restrict it with a network policy. That's why no label carries a
@@ -303,8 +334,9 @@ targets and asserts the image-hygiene properties above.
 | `test_breaker_routing.py` | Breaker as the router sees it over a real socket: all-replicas-open fails fast (not a 120s hang), `/readyz` behavior, half-open recovery. |
 | `test_retries.py` | Bounded retries with jitter on 429/502/503/504 — connect errors retried, read timeouts never retried, `Retry-After` handling, `MAX_ATTEMPTS == 2`. |
 | `test_metrics.py` | `/metrics` endpoint format, cardinality bounds, request instrumentation. |
-| `test_upstream_metrics.py` | Parses vLLM's own `/metrics` (against a real captured scrape) to derive the wedge signal. |
-| `test_mtls.py` | Gateway→vLLM mTLS wiring: rejects missing/wrong-CA client certs, succeeds with a correct chain, fails closed if not configured. |
+| `test_wedge.py` | Wedge-signal state machine (pure, clock-injected) plus a live-stub integration test proving the real dispatch path produces the signature — QVAC Fabric has no `/metrics` to scrape, so this replaces `bkn301-inference`'s `test_upstream_metrics.py`. |
+| `test_qvac_quirks.py` | QVAC-documented behaviors the stub fakes: `context_length_exceeded` at a configured ctx_size, vision content silently dropped from chat. |
+| `test_mtls.py` | Gateway→upstream mTLS wiring: rejects missing/wrong-CA client certs, succeeds with a correct chain, fails closed if not configured. |
 | `test_quota.py` | Per-key token budgets and concurrency caps, including that a streamed response holds its concurrency slot for the life of the stream. |
 | `test_streaming_status.py` | The streaming path reports the upstream's real HTTP status (regression test for a prior bug where a 503 reached the caller as 200). |
 | `test_loadgen.py` | `scripts/loadgen.py` end-to-end: concurrent workers genuinely overlap, TTFT/decode-rate reporting. |
@@ -323,24 +355,24 @@ boot) — that's a stall artifact, not a regression, if you see it.
 
 ## Current status
 
-PRD Phase 0–2 are complete: `/metrics` + vLLM metrics scraping, the circuit
-breaker with health-aware routing, per-key token budgets, bounded retries
-with jitter, and gateway→vLLM mTLS have all shipped and are tested (as of
-commit `c9af5ca`). Core capacity requirements (≥20 tok/s/user, 8k context)
-were measured on a real rented A10 with 2×+ headroom on both — see
-`docs/PHASE1_RESULTS.md`.
+This fork's code-level swap is done and tested: the wedge signal is now
+derived from gateway-side dispatch bookkeeping instead of scraping vLLM's
+`/metrics` (`gateway/upstream/wedge.py`), the stub emulates QVAC's documented
+quirks instead of vLLM's, and `deploy/k8s/probes.yaml` targets `/v1/models`.
+Full suite green, laptop-only, no GPU — see `docs/QVAC_FORK.md` for the
+complete disposition.
 
-Work is currently parked waiting on an external answer, not a technical
-blocker in this repo: whether Azure staging provides a full-card A10, since
-some Azure GPU SKUs boot as a fraction of a card with a reduced VRAM frame
-buffer that would silently break the 8k-context requirement (PRD §8 Q1).
+**Nothing about this fork has been run against a real QVAC Fabric server
+yet.** `docs/QVAC_FORK.md`'s verification checklist — cold-start timing,
+whether `/v1/models` survives an engine freeze, real concurrent-slot memory
+cost, real SSE framing, the actual model/quant choice, TLS/mTLS placement —
+is entirely open. Nothing in `deploy/k8s/probes.yaml` or the PRD's capacity
+math should be treated as tuned until that checklist closes.
 
-One open technical item, no GPU required to pick up: the wedge-detection
-signal (`num_requests_waiting > 0` while `generation_tokens_total` stays
-flat) doesn't reliably fire on a real frozen-engine process — a
-complementary signal (e.g. alerting on elevated in-flight requests with no
-matching completions, or a synthetic probe through the real request path) is
-still needed.
+`bkn301-inference`'s own vLLM-era status (PRD Phase 0–2 complete, KPIs met on
+a real A10, Azure full-card-SKU question still open) is preserved for
+reference in `docs/HANDOFF.md`'s history and is **not** this fork's current
+status.
 
 ---
 
@@ -348,10 +380,11 @@ still needed.
 
 | Doc | What it is |
 |---|---|
-| `docs/HANDOFF.md` | Session history and current state — read first if picking this up cold. |
+| `docs/QVAC_FORK.md` | **Read this first.** Why this fork exists, what changed vs. `bkn301-inference`, what's degraded, and the open verification checklist. |
+| `docs/HANDOFF.md` | Session history and current state — read next if picking this up cold. |
 | `docs/INFERENCE_SERVICE_PRD.md` | Design source of truth: requirements, stack feasibility, deployment contract, security design, phased plan. |
 | `docs/PROBE_CONTRACT.md` | Health-probe design, extracted for DevOps. |
 | `docs/VAST_AI_RUNBOOK.md` | Getting onto a rented A10 for dev/benchmarking. |
 | `docs/VAST_AI_OPERATIONS.md` | vast.ai booking/session-management mechanics. |
-| `docs/PHASE1_RESULTS.md`, `docs/PHASE2_L4_RESULTS.md` | Raw capacity/behavior measurements from real GPU sessions. |
+| `docs/PHASE1_RESULTS.md`, `docs/PHASE2_L4_RESULTS.md` | Pre-fork vLLM baseline measurements (`results/vllm-baseline/`) — the numbers this fork's own QVAC measurements get compared against, not this repo's current numbers. |
 | `docs/NEXT_SESSION_PROMPT.md` | Paste-ready prompt for picking up a fresh working session. |
