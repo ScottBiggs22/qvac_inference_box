@@ -145,9 +145,10 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="BKN301 Inference Gateway",
+        title="BKN301 QVAC Inference Gateway",
         description=(
-            "Authenticating OpenAI-compatible gateway in front of self-hosted vLLM."
+            "Authenticating OpenAI-compatible gateway in front of self-hosted "
+            "QVAC Fabric."
         ),
         version="0.1.0",
         lifespan=lifespan,

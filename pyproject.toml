@@ -1,4 +1,6 @@
-# bkn301-inference — the FirstData inference gateway and its deployment artefacts.
+# bkn301-qvac-inference — the FirstData inference gateway and its deployment
+# artefacts, forked from bkn301-inference to front QVAC Fabric instead of vLLM
+# (docs/QVAC_FORK.md has the why and the full disposition of what changed).
 #
 # NOTE ON HOUSE STYLE. The consuming repo (baas-poc-templates) has no
 # pyproject.toml, no linter config and no Python CI -- dependencies live in a
@@ -41,9 +43,9 @@ build-backend = "setuptools.build_meta"
 packages = ["gateway", "gateway.auth", "gateway.routes", "gateway.upstream"]
 
 [project]
-name = "bkn301-inference"
+name = "bkn301-qvac-inference"
 version = "0.1.0"
-description = "Authenticating OpenAI-compatible gateway in front of self-hosted vLLM"
+description = "Authenticating OpenAI-compatible gateway in front of self-hosted QVAC Fabric"
 requires-python = ">=3.12"
 
 dependencies = [
@@ -51,7 +53,7 @@ dependencies = [
   "uvicorn==0.30.1",
   "pydantic==2.8.2",
   "pydantic-settings==2.3.4",
-  # Async HTTP to the upstream vLLM replicas. Needed specifically for its
+  # Async HTTP to the upstream QVAC Fabric replicas. Needed specifically for its
   # streaming response support: the gateway passes SSE through rather than
   # buffering it, because buffering a 200-token answer at 20 tok/s would add ten
   # seconds of blank screen (PRD §6.3 C2).

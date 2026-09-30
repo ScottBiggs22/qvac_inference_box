@@ -1,4 +1,4 @@
-# bkn301-inference
+# bkn301-qvac-inference
 
 An authenticating, OpenAI-compatible gateway that sits in front of a
 self-hosted **vLLM** server running **Qwen3-8B-AWQ** on a single 24 GiB
