@@ -148,7 +148,11 @@ def live_stub():
             if proc.poll() is not None:
                 raise RuntimeError(f"stub exited early with {proc.returncode}")
             try:
-                if httpx.get(f"{base}/health", timeout=0.5).status_code == 200:
+                # QVAC Fabric has no /health endpoint (docs/QVAC_FORK.md), so
+                # this polls the same /v1/models path the gateway's own
+                # UpstreamPool.health()/.probe() use -- the stub's contract
+                # should be exactly what production actually offers.
+                if httpx.get(f"{base}/v1/models", timeout=0.5).status_code == 200:
                     return base
             except Exception:  # noqa: BLE001 - still booting
                 _time.sleep(0.1)
@@ -228,7 +232,6 @@ def live_gateway(live_stub, tmp_path):
             "API_KEY_PEPPER": pepper,
             "UPSTREAM_URLS": f"{upstream}/v1",
             "AUDIT_LOG_PATH": str(tmp_path / "gw-audit.jsonl"),
-            "UPSTREAM_METRICS_POLL_SEC": "1.0",
             **(gateway_env or {}),
         }
         # S603: this interpreter plus literals from the test body.

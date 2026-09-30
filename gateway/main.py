@@ -25,25 +25,13 @@ from gateway.config import settings
 from gateway.metrics import MetricsMiddleware
 from gateway.routes import chat, health, metrics, models
 from gateway.upstream.client import pool
-from gateway.upstream.metrics_scraper import upstream_metrics
+from gateway.upstream.wedge import wedge_monitor
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-
-async def _scrape_loop() -> None:
-    """Poll every replica's own /metrics so the wedge signature can be derived."""
-    while True:
-        try:
-            await upstream_metrics.poll_once(pool.client, pool.urls)
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:  # noqa: BLE001
-            logger.warning("upstream metrics poll failed: %s: %s", type(e).__name__, e)
-        await asyncio.sleep(settings.UPSTREAM_METRICS_POLL_SEC)
 
 
 async def _breaker_prober() -> None:
@@ -53,24 +41,33 @@ async def _breaker_prober() -> None:
     loop does nothing but read local state, so a healthy gateway generates no
     background traffic at all and the unit suite does not acquire a task hammering
     a closed port.
+
+    There is no separate scrape loop here (contrast with bkn301-inference,
+    which polled each vLLM replica's own /metrics on a timer): QVAC Fabric
+    exposes nothing to poll, so `wedge_monitor` is driven entirely by dispatch/
+    settlement events `gateway/upstream/client.py` already records on every
+    attempt. This tick only *reads* that state and republishes it.
     """
     while True:
         try:
             now = time.monotonic()
             for breaker in pool.breakers:
+                suspected = wedge_monitor.suspected(
+                    breaker.url, settings.UPSTREAM_WEDGE_WINDOW_SEC, now)
+                gw_metrics.upstream_wedge_suspected.labels(
+                    upstream=breaker._label).set(1 if suspected else 0)
+                gw_metrics.upstream_wedge_stall_seconds.labels(
+                    upstream=breaker._label).set(wedge_monitor.stall_seconds(breaker.url, now))
                 # A closed replica is still watched for the wedge signature: a
-                # wedged engine answers /health and serves no tokens, so nothing
-                # else in the system would notice.
+                # wedged engine answers /models and serves no completions, so
+                # nothing else in the system would notice.
                 if breaker.state.name == "CLOSED":
-                    breaker.record_wedge(
-                        upstream_metrics.wedge_suspected(breaker.url), now)
+                    breaker.record_wedge(suspected, now)
                     continue
                 if breaker.due_for_probe(now):
                     ok = await pool.probe(breaker.url)
                     breaker.record_probe(
-                        ok, time.monotonic(),
-                        wedge_suspected=upstream_metrics.wedge_suspected(breaker.url),
-                    )
+                        ok, time.monotonic(), wedge_suspected=suspected)
         except asyncio.CancelledError:
             raise
         except Exception as e:  # noqa: BLE001
@@ -123,7 +120,6 @@ async def lifespan(app: FastAPI):
             "a stolen key store is sufficient for an offline attack."
         )
     tasks = [
-        asyncio.create_task(_scrape_loop(), name="upstream-metrics"),
         asyncio.create_task(_loop_lag_monitor(), name="loop-lag"),
         asyncio.create_task(_breaker_prober(), name="breaker-prober"),
     ]

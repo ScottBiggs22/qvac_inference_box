@@ -3,17 +3,22 @@
 WHY THIS EXISTS
 ===============
 An M-series MacBook has no CUDA, and Docker Desktop on macOS has no GPU
-passthrough, so vLLM cannot run locally at all -- not slowly, not at reduced
-precision, not at all (PRD §4.7). Without a stand-in, every line of gateway code
-would be blocked on a rented or shared GPU box being up.
+passthrough for vLLM -- and while QVAC Fabric's Vulkan/Metal backends can in
+principle run on this hardware, doing so is not yet part of this repo's
+verified dev loop (docs/QVAC_FORK.md). So this still serves the parts of the
+OpenAI surface the gateway actually touches, on the laptop, in-process,
+deterministically:
 
-So this serves the parts of the OpenAI surface the gateway and the AI service
-actually touch, on the laptop, in-process, deterministically:
+    GET  /v1/models
+    POST /v1/chat/completions   (streaming and non-streaming)
 
-    /v1/models
-    /v1/chat/completions        (streaming and non-streaming)
-    /health                     (mimics vLLM's own readiness semantics)
-    /metrics                    (vLLM's real series, with its real label set)
+Notably absent, and deliberately so: `/health` and `/metrics`. QVAC Fabric's
+HTTP server documents neither (docs/QVAC_FORK.md) -- there is nothing upstream
+to scrape or probe beyond the OpenAI surface itself, which is exactly why
+`gateway/upstream/client.py`'s readiness checks already hit `/v1/models` and
+`gateway/upstream/wedge.py` derives its signal from dispatch bookkeeping rather
+than a scrape. Emulating endpoints the real server doesn't have would test
+nothing real.
 
 DETERMINISTIC BY DESIGN
 =======================
@@ -24,18 +29,36 @@ trying to be a language model -- it produces filler of a requested length. Any
 test asserting on answer *quality* against this stub is testing nothing.
 
 WHAT IT DELIBERATELY REPRODUCES
-===============================
-Three behaviours exist here only because the real thing has them and the gateway
-must cope:
+================================
+Behaviours exist here only because the real thing has them (as documented;
+none of this is yet verified against a live QVAC Fabric server -- see
+docs/QVAC_FORK.md's checklist) and the gateway must cope:
 
   * `--stub-think` emits a Qwen3 <think> block, so the B3 stripper can be tested
-    against the failure it exists for.
+    against the failure it exists for -- unchanged from bkn301-inference, since
+    it is a model-family quirk, not an engine one.
   * `--stub-latency` adds a delay, so probe tuning and the gateway's separate
-    connect/read budgets can be exercised. PRD §4.6 warns that a naively tuned
-    liveness probe kills healthy pods precisely because a legitimate generation
-    can take 10s+.
-  * `--stub-fail-after N` starts returning 503 after N requests, for the circuit
-    breaker.
+    connect/read budgets can be exercised. A legitimate generation can take
+    10s+, and a naively tuned liveness probe must not kill a healthy pod over
+    that.
+  * `--stub-fail-after N` starts returning 503 after N requests, for the
+    circuit breaker.
+  * `--stub-ctx-size` (default 8192, a properly-configured deployment, not
+    QVAC's raw server default of 1024 -- see StubState.ctx_size's docstring
+    for why the stub does not default to the smaller number) rejects a
+    request whose prompt-plus-completion budget exceeds it with a
+    `context_length_exceeded` 400, the way an OpenAI-shaped
+    server signals this.
+  * Vision content in a chat message (an `image_url` part) is silently
+    dropped rather than erroring or being described in the reply -- QVAC's
+    documented behavior for its chat surface, and worth a fixture precisely
+    because "silently" is the dangerous part: nothing here should let a test
+    assume vision works.
+  * `--stub-parallel-slots` (renamed from bkn301-inference's
+    `--stub-max-concurrent`) models QVAC's FCFS `config.parallel: N` fixed
+    decode slots, not vLLM's dynamic continuous batching -- same semaphore
+    mechanism, different name because the queueing MODEL it stands in for is
+    different.
 
 Run:
     python -m stub.server --port 8001
@@ -51,7 +74,7 @@ import time
 import uuid
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 STUB_MODEL = "Qwen/Qwen3-8B-AWQ"
@@ -71,17 +94,11 @@ class StubState:
         self.latency = 0.0
         self.fail_after: int | None = None
         self.requests = 0
-        # Mirrors vLLM's /metrics. REAL counters now, not decoration: `waiting`
-        # was previously initialised to 0 and written by nothing at all, which
-        # made the wedge signature -- waiting > 0 while generated_tokens stays
-        # flat -- literally unreachable through this server, even though the
-        # /metrics docstring said that was what it existed for.
-        self.running = 0
-        self.waiting = 0
-        self.generated_tokens = 0
         # When set, a chat request queues itself and then never completes: the
-        # socket stays open and /health and /metrics keep answering 200. That is
-        # what a wedged engine looks like, and why no HTTP probe can see one.
+        # socket stays open and /v1/models keeps answering 200. That is what a
+        # wedged engine looks like, and why no HTTP probe can see one --
+        # gateway/upstream/wedge.py exists specifically to catch this from the
+        # dispatch side instead.
         self.wedge = False
         # `fail_after` counts REQUESTS, which cannot express recovery: once the
         # gateway's breaker opens it stops sending chat requests, so a
@@ -91,10 +108,10 @@ class StubState:
         self.fail_until: float | None = None
         self.control_enabled = False
         # Which surface fails. `chat` (the default, and the pre-existing
-        # behaviour) leaves /health and /v1/models answering 200 while chat 503s
-        # -- which is not a test convenience but the fixture that proves a
-        # /models reclose probe is weak, because a really wedged vLLM behaves
-        # exactly that way: the API server is not the engine loop.
+        # behaviour) leaves /v1/models answering 200 while chat 503s -- which is
+        # not a test convenience but the fixture that proves a /models reclose
+        # probe is weak, because a really wedged engine behaves exactly that
+        # way: the API server is not the engine loop.
         self.fail_mode = "chat"
         self.fail_status = 503
         # A DIFFERENT shape from fail_after: "fail exactly the first N requests,
@@ -105,16 +122,31 @@ class StubState:
         # attempt 1 and attempt 2 (impractical: the gateway's own retry jitter
         # is under 2s).
         self.fail_first_n = 0
-        # Admission control, so queue depth is a consequence of concurrency
-        # rather than a decoration. Built lazily: a semaphore binds to the loop
-        # that first awaits it, and StubState is constructed at import.
-        self.max_concurrent = 0
+        # Admission control, so queueing is a consequence of concurrency rather
+        # than a decoration -- models QVAC's fixed `config.parallel: N` decode
+        # slots (FCFS beyond that), not vLLM's dynamic continuous batching.
+        # Built lazily: a semaphore binds to the loop that first awaits it, and
+        # StubState is constructed at import.
+        self.parallel_slots = 0
         self._sem: asyncio.Semaphore | None = None
+        # A PROPERLY CONFIGURED ctx_size, not QVAC's raw server default.
+        #
+        # QVAC's own documented default is 1024 -- deliberately tiny, meant to
+        # be raised explicitly via serve.models.<alias>.config.ctx_size, the
+        # same way vLLM's deployment set --max-model-len=8192 rather than
+        # trusting an engine default. 8192 mirrors that PRD requirement so
+        # every OTHER test (breaker, retries, quota, auth...) that has nothing
+        # to do with context length keeps working unmodified: chat.py injects
+        # settings.MAX_COMPLETION_TOKENS (2048) whenever a caller omits
+        # max_tokens, and 1024 here would silently 400 nearly every one of
+        # them. --stub-ctx-size explicitly opts a test INTO the tiny raw
+        # default to exercise context_length_exceeded on purpose.
+        self.ctx_size = 8192
 
     @property
     def sem(self) -> asyncio.Semaphore:
         if self._sem is None:
-            self._sem = asyncio.Semaphore(self.max_concurrent or 1024)
+            self._sem = asyncio.Semaphore(self.parallel_slots or 1024)
         return self._sem
 
 
@@ -132,8 +164,28 @@ def _deterministic_text(seed_material: str, n_tokens: int) -> str:
     return text[0].upper() + text[1:] + "."
 
 
+def _extract_text(content) -> str:
+    """The text QVAC would actually see from a message's content.
+
+    A vision part (`{"type": "image_url", ...}`) is silently absent from the
+    result, exactly as QVAC's chat surface drops it -- not stripped out as an
+    error, just never seen. A caller sending only an image and no text gets
+    back the same output as an empty message, which is the point: nothing
+    downstream should be able to tell an image was ever attached.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(
+            part.get("text", "") for part in content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+    return str(content or "")
+
+
 def _seed_of(body: dict) -> str:
-    return json.dumps(body.get("messages", []), sort_keys=True, ensure_ascii=False)
+    texts = [_extract_text(m.get("content")) for m in body.get("messages", [])]
+    return json.dumps(texts, ensure_ascii=False)
 
 
 def _completion_text(body: dict, n_tokens: int) -> str:
@@ -193,74 +245,6 @@ def _should_fail() -> bool:
     return state.fail_first_n > 0 and state.requests <= state.fail_first_n
 
 
-@app.get("/health")
-def health():
-    if state.fail_mode == "all" and _should_fail():
-        raise HTTPException(status_code=state.fail_status, detail="stub: simulated outage")
-    """vLLM returns 200 here only once the engine is up. Startup probe target."""
-    return {"status": "ok"}
-
-
-# The real vLLM 0.28.0 label set, captured from a live server in
-# results/phase1-vastai-a10/vllm-metrics-final.txt. Emitting UNLABELLED series
-# here -- as this endpoint used to -- is worse than emitting nothing: a scraper
-# written against it parses cleanly, passes every local test, and then matches
-# nothing whatsoever against a real server.
-_LABELS = f'engine="0",model_name="{STUB_MODEL}"'
-
-
-@app.get("/metrics", response_class=PlainTextResponse)
-def metrics() -> str:
-    """vLLM's exposition, in the shape a real one actually has.
-
-    `response_class=PlainTextResponse` is load-bearing. Returning a bare `str`
-    from a FastAPI route JSON-encodes it -- quoted, newlines escaped, served as
-    application/json -- and no Prometheus parser will accept that. It was this
-    endpoint's second defect.
-
-    Three traps are reproduced ON PURPOSE, because a stub that emits only the
-    happy shape is how a parser bug reaches production:
-
-      * `_created` siblings. Every counter has one; it is a GAUGE whose value is
-        a boot timestamp that never changes. A parser matching by prefix picks it
-        up and then sees a permanently flat counter -- wedge-alerting forever.
-      * `num_requests_waiting_by_reason`, which SUMS to `num_requests_waiting`
-        and so double-counts anything totalling naively.
-      * the `_total` suffix, which prometheus_client's parser strips from counter
-        FAMILY names while keeping it on the sample.
-    """
-    created = 1.789056823729462e09
-    return "\n".join([
-        "# TYPE vllm:num_requests_running gauge",
-        f"vllm:num_requests_running{{{_LABELS}}} {float(state.running)}",
-        "# TYPE vllm:num_requests_waiting gauge",
-        f"vllm:num_requests_waiting{{{_LABELS}}} {float(state.waiting)}",
-        "# TYPE vllm:num_requests_waiting_by_reason gauge",
-        f'vllm:num_requests_waiting_by_reason{{{_LABELS},reason="capacity"}} '
-        f'{float(state.waiting)}',
-        f'vllm:num_requests_waiting_by_reason{{{_LABELS},reason="deferred"}} 0.0',
-        "# TYPE vllm:kv_cache_usage_perc gauge",
-        f"vllm:kv_cache_usage_perc{{{_LABELS}}} 0.0",
-        "# TYPE vllm:generation_tokens_total counter",
-        f"vllm:generation_tokens_total{{{_LABELS}}} {float(state.generated_tokens)}",
-        "# TYPE vllm:generation_tokens_created gauge",
-        f"vllm:generation_tokens_created{{{_LABELS}}} {created}",
-        "# TYPE vllm:prompt_tokens_total counter",
-        f"vllm:prompt_tokens_total{{{_LABELS}}} 0.0",
-        "# TYPE vllm:num_preemptions_total counter",
-        f"vllm:num_preemptions_total{{{_LABELS}}} 0.0",
-        "# TYPE vllm:prefix_cache_queries_total counter",
-        f"vllm:prefix_cache_queries_total{{{_LABELS}}} 0.0",
-        "# TYPE vllm:prefix_cache_hits_total counter",
-        f"vllm:prefix_cache_hits_total{{{_LABELS}}} 0.0",
-        "# TYPE vllm:time_to_first_token_seconds histogram",
-        f'vllm:time_to_first_token_seconds_bucket{{{_LABELS},le="+Inf"}} 0.0',
-        f"vllm:time_to_first_token_seconds_sum{{{_LABELS}}} 0.0",
-        f"vllm:time_to_first_token_seconds_count{{{_LABELS}}} 0.0",
-        "",
-    ])
-
-
 @app.get("/v1/models")
 def list_models():
     if state.fail_mode == "all" and _should_fail():
@@ -293,26 +277,36 @@ async def chat_completions(request: Request):
     if not body.get("messages"):
         raise HTTPException(status_code=400, detail="messages is required")
 
+    max_tokens = int(body.get("max_tokens") or 64)
+    prompt_tokens = sum(
+        len(_extract_text(m.get("content")).split()) for m in body["messages"]
+    )
+    if prompt_tokens + max_tokens > state.ctx_size:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": {
+                    "message": (
+                        f"This model's maximum context length is {state.ctx_size} "
+                        f"tokens, but the request requires {prompt_tokens + max_tokens}."
+                    ),
+                    "code": "context_length_exceeded",
+                }
+            },
+        )
+
     if state.wedge:
-        # Register as queued, then never finish. PROBE_CONTRACT.md §4's signature
-        # needs exactly this: work waiting while the token counter does not move.
-        state.waiting += 1
+        # Register as queued, then never finish -- the socket stays open and
+        # /v1/models keeps answering 200. gateway/upstream/wedge.py's dispatch
+        # bookkeeping is what has to catch this; no HTTP probe can.
         await asyncio.Event().wait()  # never returns; the caller must time out
 
-    max_tokens = int(body.get("max_tokens") or 64)
     text = _completion_text(body, max_tokens)
-    prompt_tokens = sum(len(str(m.get("content", "")).split()) for m in body["messages"])
     completion_tokens = len(text.split())
 
-    state.waiting += 1
     async with state.sem:
-        state.waiting -= 1
-        state.running += 1
-        try:
-            if state.latency:
-                await asyncio.sleep(state.latency)
-        finally:
-            state.running -= 1
+        if state.latency:
+            await asyncio.sleep(state.latency)
 
     created = int(time.time())
     cid = f"chatcmpl-{uuid.uuid4().hex[:24]}"
@@ -337,9 +331,6 @@ async def chat_completions(request: Request):
             media_type="text/event-stream",
         )
 
-    # Non-streamed: the whole completion exists now, so count it now. The
-    # streamed path counts per frame inside _stream instead.
-    state.generated_tokens += completion_tokens
     return {
         "id": cid,
         "object": "chat.completion",
@@ -362,7 +353,9 @@ async def _stream(cid: str, created: int, model: str, text: str,
 
     The gateway passes this through rather than buffering it, so the exact frame
     shape matters: a client that parses `data: ` lines and stops at [DONE] must
-    work against the stub and against vLLM without changes.
+    work against the stub and against the real upstream without changes. This
+    is currently an ASSUMPTION for QVAC Fabric, not a measurement -- see
+    docs/QVAC_FORK.md's checklist item 4.
     """
     def frame(delta: dict, finish=None) -> str:
         payload = {
@@ -374,23 +367,12 @@ async def _stream(cid: str, created: int, model: str, text: str,
         }
         return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
-    # `running` spans the WHOLE stream. It used to cover only the latency sleep,
-    # so it dropped to 0 while tokens were still being emitted -- inverted
-    # relative to a real engine, and exactly wrong for anything reading it.
-    state.running += 1
-    try:
-        yield frame({"role": "assistant", "content": ""})
-        for word in text.split():
-            if state.latency:
-                await asyncio.sleep(min(state.latency / 50.0, 0.05))
-            # Per frame, not one jump before the first byte is sent. The old
-            # accounting meant a scraper sampling mid-stream saw an
-            # already-advanced counter -- the wedge condition, inverted.
-            state.generated_tokens += 1
-            yield frame({"content": word + " "})
-        yield frame({}, finish="stop")
-    finally:
-        state.running -= 1
+    yield frame({"role": "assistant", "content": ""})
+    for word in text.split():
+        if state.latency:
+            await asyncio.sleep(min(state.latency / 50.0, 0.05))
+        yield frame({"content": word + " "})
+    yield frame({}, finish="stop")
     if usage is not None:
         # The usage frame comes last and carries an EMPTY choices list. A
         # consumer that assumes every frame has a choices[0] crashes on it,
@@ -426,8 +408,8 @@ def main() -> None:
                     help="Heal this many seconds after failures begin. Time-based "
                          "because a breaker stops sending traffic once it opens.")
     ap.add_argument("--stub-fail-mode", choices=("chat", "all"), default="chat",
-                    help="'chat' leaves /health and /v1/models green, as a wedged "
-                         "engine does. 'all' fails every surface.")
+                    help="'chat' leaves /v1/models green, as a wedged engine "
+                         "does. 'all' fails every surface.")
     ap.add_argument("--stub-fail-status", type=int, default=503,
                     help="Status to fail with (503, 429, 500).")
     ap.add_argument("--stub-fail-first-n", type=int, default=0,
@@ -436,9 +418,15 @@ def main() -> None:
                          "--stub-fail-after's sustained failure for the breaker.")
     ap.add_argument("--stub-wedge", action="store_true",
                     help="Accept chat requests, queue them, and never answer -- "
-                         "the wedge signature PROBE_CONTRACT.md 4 describes.")
-    ap.add_argument("--stub-max-concurrent", type=int, default=0,
-                    help="Admission limit, so num_requests_waiting is real.")
+                         "the wedge signature gateway/upstream/wedge.py exists "
+                         "to catch.")
+    ap.add_argument("--stub-parallel-slots", type=int, default=0,
+                    help="QVAC-style fixed decode slots (config.parallel: N); "
+                         "0 means effectively unbounded.")
+    ap.add_argument("--stub-ctx-size", type=int, default=8192,
+                    help="Context window; a request whose prompt+completion "
+                         "exceeds it gets a context_length_exceeded 400. Pass "
+                         "1024 to exercise QVAC's raw, unconfigured default.")
     args = ap.parse_args()
 
     state.think = args.stub_think
@@ -451,7 +439,8 @@ def main() -> None:
     state.fail_first_n = args.stub_fail_first_n
     if args.stub_fail_seconds is not None:
         state.fail_until = time.time() + args.stub_fail_seconds
-    state.max_concurrent = args.stub_max_concurrent
+    state.parallel_slots = args.stub_parallel_slots
+    state.ctx_size = args.stub_ctx_size
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 

@@ -105,28 +105,31 @@ class Settings(BaseSettings):
         default_factory=lambda: os.getenv("GATEWAY_HOST", "0.0.0.0"))  # noqa: S104
     PORT: int = Field(default_factory=lambda: int(os.getenv("GATEWAY_PORT", "8080")))
 
-    # ── Upstream vLLM ────────────────────────────────────────────────────────
+    # ── Upstream QVAC Fabric ─────────────────────────────────────────────────
     # Comma-separated so the router interface has something to route over from
     # day one, even though Phase 1 runs a single replica. Adding the plural later
     # would change the config surface after DevOps had built against it.
     UPSTREAM_URLS_CSV: str = Field(
         default_factory=lambda: os.getenv("UPSTREAM_URLS", "http://127.0.0.1:8001/v1"))
-    # vLLM's single static --api-key. This is why the gateway exists: that key is
-    # all the auth vLLM has, with no per-tenant identity, quota or audit trail
-    # (PRD §5.1). It never leaves the private network.
+    # QVAC Fabric's --api-key, the same single-shared-secret shape vLLM had.
+    # This is why the gateway exists: that key is all the auth the upstream has,
+    # with no per-tenant identity, quota or audit trail (PRD §5.1). It never
+    # leaves the private network.
     UPSTREAM_API_KEY: str = Field(default_factory=lambda: os.getenv("UPSTREAM_API_KEY", ""))
-    # Split, for the reason given in the AI service's vllm backend: a decode
-    # legitimately takes 10s+ under load, a CONNECT that takes 10s means the
-    # replica is gone. One number cannot be right for both.
+    # Split: a decode legitimately takes 10s+ under load, but a CONNECT that
+    # takes 10s means the replica is gone. One number cannot be right for both.
     UPSTREAM_CONNECT_TIMEOUT_SEC: float = Field(
         default_factory=lambda: float(os.getenv("UPSTREAM_CONNECT_TIMEOUT_SEC", "5.0")))
     UPSTREAM_READ_TIMEOUT_SEC: float = Field(
         default_factory=lambda: float(os.getenv("UPSTREAM_READ_TIMEOUT_SEC", "120.0")))
 
-    # mTLS gateway->vLLM (PRD §5.4 item 1, §5.2's "private subnet, mTLS" hop).
-    # All three empty by default so Phase 1's plain-HTTP stub keeps working
-    # unmodified -- these only take effect for an https:// UPSTREAM_URLS entry;
-    # httpx's TLS config is inert on a plain http:// connection.
+    # mTLS gateway->upstream (PRD §5.4 item 1, §5.2's "private subnet, mTLS"
+    # hop). All three empty by default so Phase 1's plain-HTTP stub keeps
+    # working unmodified -- these only take effect for an https:// UPSTREAM_URLS
+    # entry; httpx's TLS config is inert on a plain http:// connection. QVAC
+    # Fabric documents no TLS support of its own (docs/QVAC_FORK.md) -- whether
+    # this wiring ends up terminating at QVAC directly or at a sidecar in front
+    # of it is unverified; see that doc's checklist.
     #
     # Paths, not inline PEM: the platform injects secrets as files (a mounted
     # Secret volume) or as env vars, and a private key is the one setting here
@@ -136,10 +139,11 @@ class Settings(BaseSettings):
         default_factory=lambda: os.getenv("UPSTREAM_CLIENT_CERT_PATH", ""))
     UPSTREAM_CLIENT_KEY_PATH: str = Field(
         default_factory=lambda: os.getenv("UPSTREAM_CLIENT_KEY_PATH", ""))
-    # Verifies vLLM's server certificate. Left unset, httpx falls back to the
-    # system trust store, which is the wrong default here: a private-subnet
-    # replica's certificate is signed by a private CA that no public trust
-    # store carries, so a real mTLS deployment must set this explicitly.
+    # Verifies the upstream's server certificate. Left unset, httpx falls back
+    # to the system trust store, which is the wrong default here: a
+    # private-subnet replica's certificate is signed by a private CA that no
+    # public trust store carries, so a real mTLS deployment must set this
+    # explicitly.
     UPSTREAM_CA_BUNDLE_PATH: str = Field(
         default_factory=lambda: os.getenv("UPSTREAM_CA_BUNDLE_PATH", ""))
 
@@ -208,7 +212,18 @@ class Settings(BaseSettings):
     #
     # The model allowlist is not decoration: without it a caller can name any
     # model string, and a gateway that forwards it blindly lets a tenant reach
-    # whatever else that vLLM process happens to serve.
+    # whatever else that upstream process happens to serve.
+    #
+    # "Qwen/Qwen3-8B-AWQ" is carried forward as the default/stub value exactly
+    # as bkn301-inference had it -- this string is opaque to the gateway (it
+    # never inspects what quant format it implies, only whether a caller's
+    # request matches it), so no code here depends on it meaning AWQ. It IS a
+    # real open item, tracked in docs/QVAC_FORK.md checklist item 5: QVAC
+    # Fabric's llama.cpp-descended engine cannot actually load an AWQ file, so
+    # this value must become whatever alias the real chosen GGUF/QVAC-quant
+    # model is served under before this is anything but a placeholder --
+    # deliberately not changed here to avoid a cross-cutting rename of every
+    # test fixture for a decision that hasn't been made yet.
     ALLOWED_MODELS_CSV: str = Field(
         default_factory=lambda: os.getenv("ALLOWED_MODELS", "Qwen/Qwen3-8B-AWQ"))
     MAX_BODY_BYTES: int = Field(
@@ -217,9 +232,9 @@ class Settings(BaseSettings):
     # occupies a decode slot for minutes and starves the other four users.
     MAX_COMPLETION_TOKENS: int = Field(
         default_factory=lambda: int(os.getenv("MAX_COMPLETION_TOKENS", "2048")))
-    # Prompt ceiling. Server-side --max-model-len is the real limit; rejecting
-    # here means an over-length request fails fast with a clear error instead of
-    # being silently truncated by vLLM (PRD §6.3 C5).
+    # Prompt ceiling. Server-side ctx_size is the real limit; rejecting here
+    # means an over-length request fails fast with a clear error instead of
+    # being silently truncated by the upstream (PRD §6.3 C5).
     MAX_PROMPT_TOKENS: int = Field(
         default_factory=lambda: int(os.getenv("MAX_PROMPT_TOKENS", "7000")))
 
@@ -237,18 +252,6 @@ class Settings(BaseSettings):
     # Gates EXPOSURE of /metrics, not collection. Collection is unconditional so
     # that flipping this cannot change which code paths run.
     METRICS_ENABLED: bool = Field(default_factory=lambda: _flag("METRICS_ENABLED", "true"))
-    # How often to scrape each replica's own /metrics. 5s gives 24 samples
-    # against the wedge window below -- enough that one missed scrape cannot flip
-    # the verdict, and enough resolution that a real stall duration is worth
-    # recording. 30s would quantise the measurement to 30s, which defeats the
-    # purpose of measuring it at all.
-    UPSTREAM_METRICS_POLL_SEC: float = Field(
-        default_factory=lambda: float(os.getenv("UPSTREAM_METRICS_POLL_SEC", "5.0")))
-    # Deliberately NOT UPSTREAM_READ_TIMEOUT_SEC. A /metrics scrape that takes
-    # two minutes is itself the symptom, and waiting that long stops the detector
-    # at precisely the moment it is needed.
-    UPSTREAM_METRICS_TIMEOUT_SEC: float = Field(
-        default_factory=lambda: float(os.getenv("UPSTREAM_METRICS_TIMEOUT_SEC", "2.0")))
     # HOW LONG THE WEDGE SIGNATURE MUST HOLD BEFORE IT IS BELIEVED.
     #
     # THIS NUMBER IS AN ESTIMATE, NOT A MEASUREMENT. It comes from
@@ -261,6 +264,13 @@ class Settings(BaseSettings):
     # bkn301_gateway_upstream_wedge_stall_seconds is exported continuously,
     # including well below this threshold, specifically so the first real
     # incident replaces this guess with data.
+    #
+    # THE SIGNAL ITSELF CHANGED SHAPE UNDER QVAC (docs/QVAC_FORK.md).
+    # bkn301-inference derived this from polling vLLM's own /metrics on a timer;
+    # QVAC exposes no such endpoint, so gateway/upstream/wedge.py derives it
+    # instead from the gateway's own dispatch/settlement bookkeeping -- which
+    # means it can only see a stall that has real traffic against it (see that
+    # module's docstring). This window still gates that signal the same way.
     UPSTREAM_WEDGE_WINDOW_SEC: float = Field(
         default_factory=lambda: float(os.getenv("UPSTREAM_WEDGE_WINDOW_SEC", "120.0")))
 
@@ -277,7 +287,7 @@ class Settings(BaseSettings):
 
     @property
     def UPSTREAM_CLIENT_CERT(self) -> tuple[str, str] | None:  # noqa: N802
-        """(cert, key) to present to vLLM, or None if mTLS is not configured.
+        """(cert, key) to present to the upstream, or None if mTLS is not configured.
 
         Half-set -- one path present, the other empty -- is almost certainly a
         typo'd or partially-templated env var rather than an intentional

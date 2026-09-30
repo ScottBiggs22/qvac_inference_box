@@ -1,4 +1,4 @@
-"""HTTP client for the upstream vLLM replicas.
+"""HTTP client for the upstream QVAC Fabric replicas.
 
 STREAMING IS PASSED THROUGH, NOT BUFFERED
 =========================================
@@ -21,19 +21,30 @@ invasive than starting with one. `pick()` is round-robin today; health-aware
 selection and the circuit breaker (PRD §5.3) plug in here without touching the
 routes.
 
-mTLS TO vLLM
-============
+mTLS TO THE UPSTREAM
+====================
 One `httpx.AsyncClient` (`start()`, below) backs every outbound call this
-process makes -- chat completions, health/reclose probes, and the /metrics
-scraper in `metrics_scraper.py`, which is handed `pool.client` directly. So
-wiring TLS in one place (PRD §5.4 item 1, `_upstream_ssl_context()`) covers all
-three; there is no second HTTP client anywhere in this process that could
-bypass it. See `gateway/config.py`'s `UPSTREAM_CLIENT_CERT`/
-`UPSTREAM_CA_BUNDLE_PATH` for the env-var surface, `_upstream_ssl_context`'s own
-docstring for why the TLS context is built by hand rather than through httpx's
-`cert=`/`verify=<str>` params, and PRD §4.8 for why this is scoped to code +
-config + a self-signed-cert test rather than something validated on a laptop:
-the security review has to run against the real deployment path.
+process makes -- chat completions and health/reclose probes both. So wiring TLS
+in one place (PRD §5.4 item 1, `_upstream_ssl_context()`) covers both; there is
+no second HTTP client anywhere in this process that could bypass it. See
+`gateway/config.py`'s `UPSTREAM_CLIENT_CERT`/`UPSTREAM_CA_BUNDLE_PATH` for the
+env-var surface, `_upstream_ssl_context`'s own docstring for why the TLS
+context is built by hand rather than through httpx's `cert=`/`verify=<str>`
+params, and PRD §4.8 for why this is scoped to code + config + a self-signed-
+cert test rather than something validated on a laptop: the security review has
+to run against the real deployment path. **QVAC Fabric documents no TLS/mTLS
+support of its own** (docs/QVAC_FORK.md) -- this wiring is exercised against
+whatever terminates TLS in front of it, which may need to be a sidecar rather
+than QVAC itself; that is an open, unverified question, not a settled one.
+
+WEDGE DETECTION HAS NO METRICS ENDPOINT TO LEAN ON
+===================================================
+vLLM exposed its own `/metrics`; a separate scraper (deleted --
+`gateway/upstream/metrics_scraper.py` under bkn301-inference) polled it on a
+timer to derive the wedge signature. QVAC Fabric documents no metrics endpoint
+at all, so `_send_and_record` below instead reports every dispatch and every
+settlement to `gateway.upstream.wedge.wedge_monitor` directly -- see that
+module's docstring for the derived signal and its honest limits.
 """
 from __future__ import annotations
 
@@ -48,6 +59,7 @@ import httpx
 from gateway import metrics as gw_metrics
 from gateway.config import settings
 from gateway.upstream.breaker import BreakerRegistry, FailureKind
+from gateway.upstream.wedge import wedge_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +104,7 @@ MAX_ATTEMPTS = 2
 # safe: 502/503/504 are what an overloaded, restarting, or wedged-and-timing-out
 # proxy actually returns, and doubling a request against those is the retry's
 # whole reason to exist. 500 more often reflects a genuine error the REQUEST
-# itself triggered -- a shape vLLM rejected -- and retrying that only doubles a
+# itself triggered -- a shape the upstream rejected -- and retrying that only doubles a
 # guaranteed failure. 429 is included: it is the designed path, since the
 # breaker's WEIGHTS give it weight 0 specifically so a replica asking for less
 # load is retried rather than treated as broken.
@@ -224,7 +236,7 @@ class UpstreamPool:
             headers["Authorization"] = f"Bearer {settings.UPSTREAM_API_KEY}"
         self._client = httpx.AsyncClient(
             headers=headers,
-            # mTLS to vLLM (PRD §5.4 item 1). See _upstream_ssl_context's
+            # mTLS to the upstream (PRD §5.4 item 1). See _upstream_ssl_context's
             # docstring for why this is a hand-built ssl.SSLContext rather
             # than httpx's own cert=/verify=<str> params. Inert for a plain
             # http:// UPSTREAM_URLS entry -- Phase 1's stub is unaffected.
@@ -318,7 +330,7 @@ class UpstreamPool:
     def _label(self, url: str) -> str:
         """Replicas are labelled by index, never by URL, in every metric.
 
-        /metrics is unauthenticated, and these are private-subnet vLLM
+        /metrics is unauthenticated, and these are private-subnet upstream
         addresses -- the same class of leak that keeps `keyid` out of the
         request-path labels, topology instead of tenancy.
         """
@@ -330,10 +342,15 @@ class UpstreamPool:
     async def _send_and_record(
         self, upstream: str, url: str, body: dict, *, stream: bool,
     ) -> httpx.Response | Exception:
-        """One attempt against one replica: send, then record into both the
-        breaker and /metrics. Returns the response OR the exception -- never
-        raises -- so the retry loop can inspect either uniformly.
+        """One attempt against one replica: send, then record into the
+        breaker, /metrics, and the wedge monitor. Returns the response OR the
+        exception -- never raises -- so the retry loop can inspect either
+        uniformly.
+
+        The wedge token is opened before the send and always closed, on every
+        exit path, or a settled attempt would stall-count forever.
         """
+        token = wedge_monitor.dispatched(upstream)
         try:
             if stream:
                 request = self.client.build_request("POST", url, json=body)
@@ -344,12 +361,18 @@ class UpstreamPool:
             self.record(upstream, exc=e)
             gw_metrics.upstream_requests_total.labels(
                 upstream=self._label(upstream), outcome="unreachable").inc()
+            # A connect failure or read timeout is not evidence the replica is
+            # answering -- see wedge.py's docstring for why alive=False here.
+            wedge_monitor.settled(upstream, token, alive=False)
             return e
         self.record(upstream, status_code=resp.status_code)
         gw_metrics.upstream_requests_total.labels(
             upstream=self._label(upstream),
             outcome="ok" if resp.status_code < 400 else "http_error",
         ).inc()
+        # Any received response -- error status included -- proves the process
+        # is alive and answering; see wedge.py's docstring for why.
+        wedge_monitor.settled(upstream, token, alive=True)
         return resp
 
     async def _with_retry(

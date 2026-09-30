@@ -23,14 +23,19 @@ enforced in code below rather than by convention:
     authenticated tenant can drive at will.
 
 The same reasoning removes the upstream URL: replicas are labelled by index, so
-internal vLLM addresses are not published to an anonymous scraper.
+internal upstream addresses are not published to an anonymous scraper.
 
-BUCKETS
-=======
-vLLM's own `http_request_duration_seconds` is the cautionary tale: its buckets
-stop at 1.0s and, in the Phase 1 capture, 168 of 168 chat requests landed in
-`+Inf`. It measures nothing. Ours are sized from
-`results/phase1-vastai-a10/audit.jsonl` (n=78): min 85ms, p50 10.15s, p95 11.1s.
+BUCKETS -- INHERITED FROM THE vLLM-ERA MEASUREMENTS, NOT YET RE-VALIDATED
+==========================================================================
+vLLM's own `http_request_duration_seconds` is the cautionary tale this module
+was built against: its buckets stop at 1.0s and, in the Phase 1 capture, 168 of
+168 chat requests landed in `+Inf`. It measured nothing. Ours below are sized
+from `results/vllm-baseline/phase1-vastai-a10/audit.jsonl` (n=78): min 85ms,
+p50 10.15s, p95 11.1s -- vLLM numbers, carried forward as a starting point, NOT
+QVAC Fabric measurements. QVAC's FCFS slot queueing (docs/QVAC_FORK.md) makes
+no promise its latency distribution resembles vLLM's continuous-batching one;
+these buckets need re-deriving once a real QVAC Phase 1 capture exists, the
+same way vLLM's own defaults were replaced here.
 """
 from __future__ import annotations
 
@@ -135,25 +140,6 @@ upstream_requests_total = Counter(
     f"{NAMESPACE}_upstream_requests_total",
     "Attempts against an upstream replica, by index and outcome.",
     ["upstream", "outcome"],
-)
-
-# Written by gateway/upstream/metrics_scraper.py.
-upstream_up = Gauge(
-    f"{NAMESPACE}_upstream_up",
-    "1 if the replica's own /metrics was scraped successfully most recently.",
-    ["upstream"],
-)
-
-upstream_scrape_age_seconds = Gauge(
-    f"{NAMESPACE}_upstream_scrape_age_seconds",
-    "Seconds since the last successful scrape of the replica's /metrics.",
-    ["upstream"],
-)
-
-upstream_scrape_failures_total = Counter(
-    f"{NAMESPACE}_upstream_scrape_failures_total",
-    "Failed scrapes of a replica's /metrics, by failure kind.",
-    ["upstream", "kind"],
 )
 
 upstream_wedge_suspected = Gauge(
