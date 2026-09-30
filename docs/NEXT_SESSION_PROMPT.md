@@ -2,7 +2,18 @@
 
 **Updated 2026-09-11**, after Phase 1 completed on a rented A10.
 
-Copy the block below into a new Claude Code session started **from this repo**:
+> **THIS IS THE vLLM-ERA PROMPT, FOR `bkn301-inference`, NOT THIS FORK.**
+> `bkn301-qvac-inference` (this repo) forked at that state on 2026-09-29 to
+> swap vLLM for QVAC Fabric — see `docs/QVAC_FORK.md`, which is the real
+> entry point now, and `docs/HANDOFF.md` §8 for what the fork session did.
+> Everything below describes `bkn301-inference`'s state and directory path,
+> kept as historical context for how that repo's own next session should
+> start — do not paste this block to pick up work in THIS repo. It also
+> references the sibling `baas-poc-templates` app repo, which is out of
+> scope for this fork.
+
+Copy the block below into a new Claude Code session started **from
+`bkn301-inference`** (not this fork):
 
 ```bash
 cd "/Users/scottbiggsbkn301aact/Desktop/BKN Code 2/bkn301-inference"

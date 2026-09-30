@@ -4,6 +4,13 @@ Written to carry context into a new session working inside this repo. The PRD
 (`docs/INFERENCE_SERVICE_PRD.md`) remains the design source of truth; this
 document is *state*, not design.
 
+> **THIS REPO WAS FORKED ON 2026-09-29 into `bkn301-qvac-inference`, swapping
+> vLLM for QVAC Fabric.** Everything below this line is the state of
+> `bkn301-inference` (the vLLM version) as of the fork point — kept as
+> history, not edited. If you're reading this inside the QVAC fork, start
+> instead with `docs/QVAC_FORK.md`, then §8 at the bottom of this file for
+> what the fork session actually did.
+
 ---
 
 ## 0. Start here — mTLS is done but uncommitted; PRD §7 Phase 2 is now fully closed
@@ -723,3 +730,87 @@ buffer, and a fractional SKU boots, serves, and silently breaks the 8k context
 requirement. Highest-priority question outstanding with DevOps.
 
 </details>
+
+---
+
+## 8. Session: forked into `bkn301-qvac-inference`, vLLM → QVAC Fabric. 2026-09-29.
+
+Everything above this section is `bkn301-inference`'s own history and is
+unrelated to this fork's engine choice — it stays as the factual record of
+what was actually built and measured on vLLM.
+
+**Why:** a management-directed business requirement to run on QVAC Fabric
+instead of vLLM, explicitly acknowledged as an engineering downgrade rather
+than a technical improvement. `bkn301-inference`'s `main` is already deployed
+and already meets every PRD KPI on vLLM; that repo and its history are
+untouched by this fork.
+
+**What this session did**, in commit order (see `git log`):
+
+1. Cloned `bkn301-inference` at `c6c1695` into this repo, full history intact.
+2. Renamed (`pyproject.toml`, `gateway/main.py`'s FastAPI title, README's
+   `<h1>`) — administrative only, no logic change.
+3. Deleted `gateway/upstream/metrics_scraper.py` (100% vLLM-proprietary
+   Prometheus parsing, no QVAC equivalent exists) and `gateway/main.py`'s
+   `_scrape_loop`. Replaced with `gateway/upstream/wedge.py`, deriving the
+   wedge signature from `UpstreamPool._send_and_record`'s own
+   dispatch/settlement bookkeeping instead — wired into the SAME
+   `breaker.record_wedge()` seam with zero changes to `breaker.py`, since
+   that method already consumed an abstract boolean.
+4. Rewrote `stub/server.py`: dropped vLLM's `/metrics`/`/health` emulation,
+   added QVAC's documented quirks (context_length_exceeded at a configurable
+   ctx_size, vision content silently dropped, FCFS `--stub-parallel-slots`
+   queueing). Found and fixed a real trap here: defaulting the stub's
+   ctx_size to QVAC's raw documented 1024 broke a dozen unrelated tests,
+   because `chat.py` injects `MAX_COMPLETION_TOKENS=2048` whenever a caller
+   omits `max_tokens` — the stub now defaults to a properly-configured 8192
+   instead, with 1024 available as an explicit opt-in fixture.
+5. Replaced `tests/test_upstream_metrics.py` with `tests/test_wedge.py` and
+   added `tests/test_qvac_quirks.py`.
+6. Rewrote `deploy/k8s/probes.yaml` for QVAC Fabric's `/v1/models` (no
+   `/health` exists), with every timing number marked as an unverified
+   placeholder rather than carrying vLLM's measured 153s/45s numbers forward
+   as if they still applied.
+7. Docstring/comment pass over every remaining file that named vLLM
+   specifically but needed no logic change (`gateway/audit.py`, `chat.py`,
+   `breaker.py`, `loadgen.py`, `b3_probe.py`, `verify_box.sh`, several test
+   docstrings) — each carried-forward vLLM number or assumption is now
+   flagged in place as unverified for QVAC rather than silently implied.
+8. Added `docs/QVAC_FORK.md` (the actual entry point now — read it before
+   this file) and rewrote `README.md` to match. Moved
+   `results/{phase1-vastai-a10,phase2-l4-wedge-argon2}/` under
+   `results/vllm-baseline/`, kept as the numeric baseline this fork's own
+   measurements get compared against. Rewrote `docs/PROBE_CONTRACT.md`'s
+   probe-target and wedge-mechanism sections, keeping its §4 real-freeze
+   account as historical record (it's the direct reason item 3's design
+   looks the way it does) and its §3/most-of-§6 reasoning as still-applicable
+   since it's engine-agnostic.
+
+**Verified, not just written:** full `pytest` suite green throughout
+(laptop-only, no GPU), `ruff check .` clean, and a real `docker compose up
+--build` exercised end-to-end against the rewritten stub — `/healthz`,
+`/readyz`, `/v1/models`, non-streaming and streaming chat all confirmed
+working, and `/metrics` confirmed to have dropped the dead
+`upstream_up`/`upstream_scrape_*` gauges while `upstream_wedge_suspected`/
+`stall_seconds` still export correctly.
+
+**What this session deliberately did NOT do**, because it needs real
+hardware or a real decision this session couldn't make:
+
+- Pick the real model/quant/ctx_size/parallel-slot configuration (`ALLOWED_MODELS`
+  still carries vLLM's `"Qwen/Qwen3-8B-AWQ"` placeholder, which QVAC's
+  llama.cpp-descended engine cannot actually load — opaque to the gateway,
+  not fixed because there's nothing real to replace it with yet).
+- Pin a QVAC Fabric image or measure cold-start time.
+- Decide where TLS/mTLS terminates, given QVAC documents none of its own.
+- Build the synthetic wedge-probe follow-up (`wedge.py`'s honest gap: it
+  cannot see a wedge with zero real traffic against it).
+- Rewrite `docs/INFERENCE_SERVICE_PRD.md`'s capacity math or
+  `docs/VAST_AI_RUNBOOK.md`/`OPERATIONS.md`'s literal launch commands in
+  detail — flagged as needing it, not yet done, given the underlying
+  model/hardware decisions above aren't made.
+
+**Next action for whoever picks this up:** `docs/QVAC_FORK.md`'s
+verification checklist, in order — it needs rented A10 hardware and follows
+the exact same "measure, capture into `results/`, write up in a phase doc"
+discipline `bkn301-inference`'s own Phase 1/2 sessions (§5b, §5d above) used.

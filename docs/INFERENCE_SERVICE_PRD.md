@@ -7,6 +7,22 @@
 **Target repo:** new — `bkn301-inference` (this document moves with it)
 **Consuming repo:** `baas-poc-templates` (`services/bkn301-ai-service`, as a new `LLM_BACKEND=vllm` option)
 
+> **FORKED FROM bkn301-inference INTO bkn301-qvac-inference (2026-09-29) —
+> READ docs/QVAC_FORK.md FIRST.** This document is kept as written, against
+> vLLM, and has **not** been rewritten for QVAC Fabric. Sections §3 (stack
+> feasibility: AWQ/Marlin quantization, KV-cache pre-allocation, continuous
+> batching), §4.4–4.5 (GPU/capacity constraints derived from vLLM's memory
+> model), and §6 (the `baas-poc-templates` consuming-repo integration, out of
+> scope for this fork per its own instructions) describe vLLM-era decisions
+> and reasoning that do not carry over to QVAC Fabric's llama.cpp-descended
+> engine, its FCFS `config.parallel: N` concurrency model, or its own
+> quantization formats. The **requirements and KPIs** in §2 are carried
+> forward as this fork's target, explicitly expected to be at risk rather
+> than met — see `docs/QVAC_FORK.md`'s checklist for what has to be measured
+> before any of §3/§4's math can be redone for real. Treat this PRD as the
+> vLLM design record this fork diverges from, not as this fork's own design
+> document.
+
 ---
 
 ## 1. Summary

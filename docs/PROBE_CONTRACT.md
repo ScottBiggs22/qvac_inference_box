@@ -1,10 +1,21 @@
-# Health probe contract — vLLM and the inference gateway
+# Health probe contract — QVAC Fabric and the inference gateway
 
 **Status:** proposed, for DevOps review
-**Date:** 2026-09-09
+**Date:** 2026-09-09 (vLLM original); fork-adapted for QVAC Fabric, see banner below
 **Owner:** scott.biggs@bkn301.com
 **Source:** `INFERENCE_SERVICE_PRD.md` §4.6, extracted so it can be reviewed on its own
 **Applies to:** `deploy/k8s/probes.yaml`
+
+> **FORKED FROM bkn301-inference (docs/QVAC_FORK.md).** Everything below was
+> written against vLLM and is kept because most of the *reasoning* (§1, §3,
+> most of §6) is engine-agnostic and still applies. What does NOT carry over
+> unchanged: every endpoint name (vLLM's `/health` → QVAC Fabric's
+> `/v1/models`, since QVAC documents no health endpoint of any kind) and
+> every measured timing number (§5) — those were real measurements of vLLM on
+> a real A10, and QVAC Fabric has no equivalent measurement yet. §4's
+> real-freeze account is kept in full because it is the direct reason
+> `gateway/upstream/wedge.py` exists as a dispatch-bookkeeping mechanism
+> rather than a metrics scrape — see the note inserted there.
 
 ---
 
@@ -31,9 +42,9 @@ another full model reload, and a restart loop costs the service.
 
 | Probe | Endpoint | Checks | Timings | Why |
 |---|---|---|---|---|
-| `startupProbe` | vLLM `/health` | Engine initialised | `periodSeconds: 5`, `failureThreshold: 60` → **300s budget** | vLLM returns 200 here only once the engine is up. **While this runs, Kubernetes suppresses the other two** — which is what makes them safe to tune tightly. **Measured 2026-09-10, see §5.** |
-| `readinessProbe` | `/health` | Engine health **only** | `periodSeconds: 10`, `failureThreshold: 2` | Answers "is this instance broken", never "is it busy". See §3. |
-| `livenessProbe` | `/health` | Engine loop alive. **Never a test generation.** | `periodSeconds: 20`, `timeoutSeconds: 5`, `failureThreshold: 3` → ~60s | Restart costs 30–60s of reload, so this is the last resort. |
+| `startupProbe` | `/v1/models` (was vLLM's `/health`; QVAC Fabric has no `/health` — docs/QVAC_FORK.md) | Engine initialised, assumed | `periodSeconds: 5`, `failureThreshold: 60` → **300s budget, UNVERIFIED for QVAC** | vLLM returned 200 here only once the engine was up — whether QVAC's `/v1/models` has the same "not ready until loaded" property is unconfirmed. **While this runs, Kubernetes suppresses the other two** — which is what makes them safe to tune tightly, if the timing is right. **vLLM's number was measured 2026-09-10, see §5; QVAC Fabric's is not.** |
+| `readinessProbe` | `/v1/models` | Engine health **only** | `periodSeconds: 10`, `failureThreshold: 2` | Answers "is this instance broken", never "is it busy". See §3 — this reasoning is engine-agnostic and matters MORE under QVAC's FCFS `config.parallel: N` queueing, where "busy" is more common than it was under vLLM's continuous batching. |
+| `livenessProbe` | `/v1/models` | Engine loop alive, assumed. **Never a test generation.** | `periodSeconds: 20`, `timeoutSeconds: 5`, `failureThreshold: 3` → ~60s | Restart costs an unmeasured reload time (30–60s was vLLM's), so this is the last resort. |
 
 The gateway exposes the same split on its own process: `/healthz` for liveness,
 `/readyz` for readiness. `/readyz` goes red only when **no** upstream replica is
@@ -61,14 +72,28 @@ queue without removing anything from service discovery.
 
 ## 4. Detecting a genuinely wedged model
 
+> **THIS SECTION IS HISTORICAL — read it for the real-freeze findings, not
+> for the mechanism.** Everything below describes vLLM's `/metrics`-based
+> detector, which `gateway/upstream/metrics_scraper.py` implemented and which
+> this fork has **deleted**: QVAC Fabric exposes no metrics endpoint at all,
+> so there is nothing to scrape. `gateway/upstream/wedge.py` replaces it with
+> a signal derived from the gateway's own dispatch/settlement bookkeeping
+> instead — see that module's docstring. The finding below (§4's corrected
+> account, confirmed 2026-09-15) is the direct reason that replacement is
+> shaped the way it is: it does not depend on trusting the engine's own
+> internal counters, which is exactly the channel that turned out not to
+> reflect a real freeze. Whether the NEW mechanism catches this same freeze
+> shape on QVAC Fabric is docs/QVAC_FORK.md checklist item 2 — unverified,
+> not assumed.
+
 A wedged engine does not fail an HTTP probe — the process is alive and the
-socket answers. The signature is a **relationship between two metrics over
-time**, which is why no single endpoint can express it:
+socket answers. vLLM's signature was a **relationship between two metrics
+over time**, which is why no single endpoint could express it:
 
 > `vllm:num_requests_waiting > 0` **and** `vllm:generation_tokens_total` has not
 > advanced for N seconds.
 
-Relevant series from vLLM's `/metrics`:
+Relevant series from vLLM's `/metrics` (historical — no QVAC equivalent exists):
 
 | Metric | Use |
 |---|---|
@@ -124,17 +149,28 @@ exists.
 > corruption from an extended freeze well past the 120s window this design
 > was built around.
 >
-> **Not yet built:** a complementary signal that does not depend on the frozen
-> engine's own counters, e.g. alerting on `bkn301_gateway_inflight_requests`
-> staying elevated with no matching completions, or a synthetic probe request
-> sent through the same code path a real chat request takes (not `/health` or
-> `/models`, both of which this freeze shape leaves answering normally). A
-> design decision, deliberately left for the next session rather than rushed
-> under a live rental.
+> **Now built, in this fork, as `gateway/upstream/wedge.py`:** a signal that
+> does not depend on the frozen engine's own counters — it tracks, per
+> replica, whether a dispatched chat-completion attempt has been outstanding
+> longer than the window with no completions recorded for that replica in the
+> meantime. This is a direct implementation of the "not yet built" idea named
+> here. What it does **not** yet do: a synthetic probe request sent through
+> the same code path with zero real traffic against a replica — that remains
+> unbuilt (docs/QVAC_FORK.md checklist item 9), because the new mechanism can
+> only observe a stall that has a real dispatch to measure the age of. And
+> whether it actually catches THIS freeze shape (`/v1/models` answering
+> normally, same as `/health` and `/models` did here) on a real QVAC Fabric
+> server is unverified — checklist item 2.
 
 ---
 
 ## 5. Which numbers are measured, and which are still estimates
+
+> **All of this is the vLLM-era record (`results/vllm-baseline/`).** No QVAC
+> Fabric equivalent measurement exists yet — see docs/QVAC_FORK.md's
+> checklist items 1–3. A `docs/PHASE1_RESULTS_QVAC.md` following this same
+> methodology is the thing that should eventually replace this section's
+> numbers for THIS repo, the same way this table replaced an earlier guess.
 
 Phase 1 (2026-09-10, full-card A10) measured one of the two and **not** the
 other. The distinction is load-bearing, so it is tabulated rather than described:
@@ -172,17 +208,31 @@ built.
 
 ## 6. Constraints that sit alongside the probes
 
-From PRD §4.5, repeated here because they belong to whoever writes the manifest:
+From PRD §4.5, repeated here because they belong to whoever writes the manifest.
+Same hardware class as the vLLM deployment (a cluster of A10s) throughout —
+these are mostly hardware facts, not engine facts, so most carry over as-is;
+where a constraint's REASON was specifically about vLLM's behavior, that's
+flagged rather than silently kept:
 
-1. **One whole GPU per pod** — `nvidia.com/gpu: 1`, never a fraction. vLLM
-   pre-allocates its KV cache at startup, so a second vLLM pod on the same card
-   **fails at boot** rather than degrading.
-2. **The A10 does not support MIG** (A100/A30/H100 only). Partitioning means
-   time-slicing or MPS, neither of which gives memory isolation.
+1. **One whole GPU per pod** — `nvidia.com/gpu: 1`, never a fraction, kept as
+   the conservative default. vLLM's REASON was KV-cache pre-allocation at
+   startup, so a second vLLM pod on the same card **failed at boot** rather
+   than degrading. Whether QVAC Fabric's memory model shares this property is
+   **unverified** (docs/QVAC_FORK.md) — the constraint is kept because
+   violating it was expensive under vLLM, not because it's confirmed true
+   here.
+2. **The A10 does not support MIG** (A100/A30/H100 only) — a hardware fact,
+   unchanged. Partitioning means time-slicing or MPS, neither of which gives
+   memory isolation, regardless of which engine sits on top.
 3. **The card must be a full 24 GiB A10, not a vGPU partition.** Azure's
-   `NVadsA10_v5` sizes start at one-sixth of a card with a 4 GiB frame buffer. A
-   fractional size boots, serves, and silently breaks the 8k context
-   requirement — see PRD §4.4(a), which is the highest-priority open question.
-4. **Nothing else may share the card.**
-5. **No tensor parallelism.** An 8B AWQ model fits one card, and A10s have no
-   NVLink.
+   `NVadsA10_v5` sizes start at one-sixth of a card with a 4 GiB frame buffer.
+   A fractional size boots, serves, and would silently break an 8k context
+   requirement under either engine — see PRD §4.4(a), which is the
+   highest-priority open question and is unrelated to the vLLM→QVAC swap.
+4. **Nothing else may share the card** — unchanged, same hardware.
+5. **Tensor/parallel-slot count is UNVERIFIED, not "none."** vLLM ran with no
+   tensor parallelism because an 8B AWQ model fit one card with no NVLink to
+   split across anyway. QVAC Fabric's analogous knob, `config.parallel: N`
+   (FCFS decode slots, not tensor parallelism), has its real memory cost on
+   this hardware unmeasured — docs/QVAC_FORK.md checklist item 3, the single
+   biggest unknown behind this fork's expected KPI regression.

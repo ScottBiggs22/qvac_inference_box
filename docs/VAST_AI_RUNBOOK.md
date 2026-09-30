@@ -4,6 +4,19 @@
 **Applies to:** Phase 1, on a personal rented GPU, before the DevOps VM lands
 **Revised:** 2026-09-09 (rev 2 — see "What changed in rev 2" at the end)
 
+> **WRITTEN FOR vLLM, NOT YET ADAPTED FOR QVAC FABRIC (docs/QVAC_FORK.md).**
+> Every vast.ai booking/hygiene/transfer mechanic below (finding a
+> driver-compatible offer, `pack_for_box.sh`/`verify_box.sh`, cost tracking)
+> is provider- and mostly engine-agnostic and should still apply. Every
+> literal `vllm serve ...` command, the `vllm/vllm-openai` image reference,
+> and the exact KV-cache/flag-reality investigation steps are vLLM-specific
+> and are **not yet rewritten for QVAC Fabric's actual CLI** — doing that
+> with confidence needs the real image/launch-flag decisions from
+> `docs/QVAC_FORK.md`'s checklist (items 1, 3, 5) made first, not a guess
+> presented as procedure. Treat every `vllm serve` line below as "this is the
+> vLLM-era shape of the step; find QVAC Fabric's real equivalent before
+> running it," not as a ready-to-run command for this fork.
+
 ---
 
 ## 0. The one rule

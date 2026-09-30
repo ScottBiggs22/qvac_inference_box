@@ -8,6 +8,15 @@ session, or came within one command of doing so.
 **Related:** `VAST_AI_RUNBOOK.md` is *what to do on the box for Phase 1*. This
 document is *how to operate vast.ai at all*, and outlives any one phase.
 
+> **WRITTEN FOR vLLM, NOT YET ADAPTED FOR QVAC FABRIC (docs/QVAC_FORK.md).**
+> The booking/session-management mechanics (finding a driver-compatible
+> offer, disk sizing, `/workspace` vs. `/root`, cost tracking, cleanup) are
+> mostly engine-agnostic and should still apply. Every literal
+> `vllm/vllm-openai` image reference and CUDA-build-version check is
+> vLLM-specific and needs the real QVAC Fabric image/backend decision
+> (checklist item 1) before it can be rewritten with confidence rather than
+> guessed.
+
 ---
 
 ## 0. Division of labour — read this before anything else
