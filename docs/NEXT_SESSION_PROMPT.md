@@ -6,11 +6,12 @@
 > `bkn301-qvac-inference` (this repo) forked at that state on 2026-09-29 to
 > swap vLLM for QVAC Fabric — see `docs/QVAC_FORK.md`, which is the real
 > entry point now, and `docs/HANDOFF.md` §8 for what the fork session did.
-> Everything below describes `bkn301-inference`'s state and directory path,
-> kept as historical context for how that repo's own next session should
-> start — do not paste this block to pick up work in THIS repo. It also
-> references the sibling `baas-poc-templates` app repo, which is out of
-> scope for this fork.
+> For picking up real hardware work in THIS repo, use
+> `docs/QVAC_FABRIC_LAUNCH_PROMPT.md` instead. Everything below describes
+> `bkn301-inference`'s state and directory path, kept as historical context
+> for how that repo's own next session should start — do not paste this
+> block to pick up work in THIS repo. It also references the sibling
+> `baas-poc-templates` app repo, which is out of scope for this fork.
 
 Copy the block below into a new Claude Code session started **from
 `bkn301-inference`** (not this fork):

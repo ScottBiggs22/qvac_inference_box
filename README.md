@@ -382,6 +382,7 @@ status.
 | Doc | What it is |
 |---|---|
 | `docs/QVAC_FORK.md` | **Read this first.** Why this fork exists, what changed vs. `bkn301-inference`, what's degraded, and the open verification checklist. |
+| `docs/QVAC_FABRIC_LAUNCH_PROMPT.md` | Paste-ready prompt for the first real QVAC Fabric session on a rented A10 — working the verification checklist on real hardware. |
 | `docs/HANDOFF.md` | Session history and current state — read next if picking this up cold. |
 | `docs/INFERENCE_SERVICE_PRD.md` | Design source of truth: requirements, stack feasibility, deployment contract, security design, phased plan. |
 | `docs/PROBE_CONTRACT.md` | Health-probe design, extracted for DevOps. |
