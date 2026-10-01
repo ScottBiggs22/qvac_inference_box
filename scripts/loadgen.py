@@ -418,7 +418,7 @@ def main() -> int:
                          "Pair with a gateway run to get the gateway's overhead.")
     ap.add_argument("--api-key", default="",
                     help="Throwaway gateway key, or the upstream's static --api-key.")
-    ap.add_argument("--model", default="Qwen/Qwen3-8B-AWQ")
+    ap.add_argument("--model", default="Qwen/Qwen3-8B-GGUF")
     ap.add_argument("--levels", default="1,3,5,8",
                     help="Concurrency levels, ascending. Default 1,3,5,8 (PRD §7).")
     ap.add_argument("--requests", type=int, default=4,

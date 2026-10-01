@@ -61,8 +61,10 @@ window is a documented **1024 tokens** (the PRD requires 8k). It documents
   nobody calling it is invisible until a periodic synthetic probe is built —
   deliberately not done in this pass (see checklist item 9).
 - **No TLS/mTLS at the engine layer.** `gateway/upstream/client.py`'s mTLS
-  wiring is unchanged and still works against *something* — whether that's
-  QVAC directly or a sidecar in front of it is unresolved (checklist item 6).
+  wiring is unchanged and still works against *something* — deferred (plain
+  HTTP) for the initial vast.ai test, matching `bkn301-inference`'s own
+  precedent; a sidecar in front of QVAC is the live option before any real
+  deployment (checklist item 6).
 - **Tiny default context window (1024 vs. vLLM's effectively-unbounded
   `--max-model-len=8192` reality).** `gateway/routes/chat.py` still injects
   `MAX_COMPLETION_TOKENS` (2048) whenever a caller omits `max_tokens` — on a
@@ -87,27 +89,59 @@ number as real).
       load-bearing in practice (expected: yes, same "API server ≠ engine loop"
       structure), and separately whether `record_probe`'s "a good probe alone
       is not sufficient" reasoning still holds.
-- [ ] **3. Actual concurrent-slot memory cost.** Does raising `parallel` share
-      weights cheaply (KV-cache-only increment, like vLLM's paging), or cost
-      near-full duplicate memory per slot? This is the number that determines
-      QVAC's real concurrent-user ceiling on one A10 — the single biggest
-      unknown behind the expected KPI regression.
+- [ ] **3. Actual concurrent-slot memory cost.** Superseded by, and now
+      tracked as, **item 5b** below — same question, moved next to the
+      capacity math it determines.
 - [ ] **4. Real SSE opening-frame shape/timing.** Confirms
       `gateway/routes/chat.py`'s TTFT measurement and `scripts/loadgen.py`'s
       timing assumptions, both currently carried over from vLLM's shape
       unverified.
-- [ ] **5. Final quantized-model choice** (GGUF, or QVAC's own
-      TQ2_0/TBQ3_0/TBQ4_0/PQ3_0/PQ4_0) at 8k `ctx_size` with N parallel slots
-      fitting in 24 GiB, and its real tok/s/user — the actual KPI-gap number
-      management asked to see. `ALLOWED_MODELS`'s `"Qwen/Qwen3-8B-AWQ"`
-      placeholder (an AWQ/CUDA format QVAC's engine cannot load at all) needs
-      replacing with whatever alias this model is actually served under.
-- [ ] **6. TLS/mTLS at the QVAC layer, or where it must move.** Two live
-      options, neither chosen: (a) plaintext HTTP + bearer token on the
-      private subnet, accepted as an explicit security-posture regression; or
-      (b) a sidecar reverse proxy terminating mTLS and forwarding plaintext to
-      QVAC on localhost — verify it doesn't reintroduce SSE buffering or break
-      QVAC's non-loopback-bearer-auth default in an unexpected way.
+- [x] **5a. Model/quant choice — DECIDED 2026-09-30, unverified in practice.**
+      `Qwen/Qwen3-8B-GGUF`, **Q4_K_M** (5.03 GiB) — the same model as
+      `bkn301-inference`'s `Qwen/Qwen3-8B-AWQ`, re-quantized. PRD §3.5 already
+      evaluated this exact HF repo and rejected it **for vLLM specifically**
+      ("GGUF support in vLLM is highly experimental... might be incompatible
+      with other features", slower than AWQ's tuned Marlin kernels) — neither
+      reason applies to QVAC Fabric, where GGUF is the native format, not a
+      bolted-on afterthought. Q4_K_M mirrors AWQ's INT4 choice and its
+      reasoning (decode is memory-bandwidth-bound on an A10, so smaller
+      weights win). `Q8_0` (8.71 GiB) is the documented fallback if Q4_K_M's
+      quality looks worse than AWQ's in practice — same role BF16 played as
+      config A's fallback in PRD §3.3's table.
+      **Redone capacity math** (PRD §3.3's method, Q4_K_M's 5.03 GiB in place
+      of AWQ's 5.6 GiB, same measured ~22.06 GiB usable from
+      `PHASE1_RESULTS.md`): ~16 GiB left for KV after weights + ~1 GiB
+      activation/compute-buffer estimate (no CUDA-graph analog assumed), at
+      vLLM's confirmed 144 KiB/token (same attention geometry, F16 KV cache)
+      → **~116,000 tokens, ~2.9× headroom for 5×8k** — *better* than vLLM's
+      measured 92,544/2.26×, **on paper**. This is conditional on checklist
+      item 5b below; if that assumption is wrong, this whole estimate is
+      wrong with it.
+      **Still open:** the exact file/revision to pin (mirroring AWQ's
+      commit-hash pin, not a moving tag), and llama.cpp's optional quantized
+      KV-cache (`--cache-type-k`/`-v`) is unused in this estimate — a real
+      lever if 116k tokens turns out optimistic.
+- [ ] **5b. Whether QVAC Fabric's HTTP server shares weights across
+      `config.parallel: N` slots** the way a standard `llama-server` does
+      (one loaded model, N independent KV-cache buffers) — the assumption
+      5a's capacity math depends on entirely. Distinct from, and not the same
+      finding as, the "parallel duplicates a full model copy" result an
+      unrelated team found — that was specific to QVAC's SDK's separate
+      Bare-worker-spawning path for concurrent completions, not this HTTP
+      server's slot mechanism, which is architecturally closer to vanilla
+      llama.cpp. Plausible, not confirmed. **The single highest-priority item
+      in this checklist** — everything else about the expected KPI
+      regression's *size* depends on this number specifically.
+- [x] **6. TLS/mTLS at the QVAC layer — DEFERRED for the initial vast.ai
+      test, 2026-09-30.** Plain HTTP + bearer token on the rented box's
+      private network, matching `bkn301-inference`'s own Phase 1 precedent
+      exactly (its mTLS work was gateway-side only and explicitly scoped as
+      "the security review has to run against the real deployment path," PRD
+      §4.8 — never validated against a live vLLM either). Revisit before any
+      real (non-test) deployment: QVAC documents no TLS support of its own,
+      so a sidecar reverse proxy terminating TLS and forwarding plaintext to
+      QVAC on localhost is the live option if mTLS is required — unbuilt,
+      not attempted this pass.
 - [ ] **7. k8s probe auth-header mechanics.** QVAC requires bearer auth on
       non-loopback binds by default; a kubelet `httpGet` probe likely counts
       as non-loopback even within the same pod. `httpGet.httpHeaders` only

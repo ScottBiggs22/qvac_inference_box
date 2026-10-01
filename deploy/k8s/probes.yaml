@@ -31,7 +31,16 @@ spec:
             # everything below it is equally unverified against the real
             # server's actual config schema -- see docs/QVAC_FORK.md.
             - --openai
-            - --model=REPLACE_ME  # the real GGUF/QVAC-quant alias, not chosen yet
+            # Qwen/Qwen3-8B-GGUF, Q4_K_M quant (5.03 GiB) -- same model as
+            # bkn301-inference's Qwen/Qwen3-8B-AWQ, re-quantized for QVAC's
+            # llama.cpp-descended engine. PRD §3.5 already evaluated this
+            # exact HF repo and rejected it FOR VLLM SPECIFICALLY
+            # ("experimental" GGUF support there); doesn't apply here, where
+            # GGUF is the native format. Q4_K_M mirrors AWQ's INT4 choice
+            # (bandwidth-bound decode on an A10 favors smaller weights).
+            # Still unpinned: the exact file/revision (docs/QVAC_FORK.md
+            # checklist item 5).
+            - --model=Qwen/Qwen3-8B-GGUF
             # 8192 to match the PRD's context requirement -- QVAC's own
             # documented default is 1024, which the PRD does not meet. vLLM's
             # equivalent was --max-model-len=8192.

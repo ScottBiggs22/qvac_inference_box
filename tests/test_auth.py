@@ -115,7 +115,7 @@ class TestRouteAuth:
     def test_valid_key_reaches_the_route(self, client, live_key):
         r = client.get("/v1/models", headers={"Authorization": f"Bearer {live_key}"})
         assert r.status_code == 200
-        assert r.json()["data"][0]["id"] == "Qwen/Qwen3-8B-AWQ"
+        assert r.json()["data"][0]["id"] == "Qwen/Qwen3-8B-GGUF"
 
     def test_revoked_key_is_401(self, client, live_key, key_store):
         keyid, _ = split_key(live_key)
@@ -139,7 +139,7 @@ class TestRequestValidation:
 
     def _post(self, client, key, **overrides):
         body = {
-            "model": "Qwen/Qwen3-8B-AWQ",
+            "model": "Qwen/Qwen3-8B-GGUF",
             "messages": [{"role": "user", "content": "hello"}],
         }
         body.update(overrides)

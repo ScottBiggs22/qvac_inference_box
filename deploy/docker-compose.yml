@@ -37,7 +37,7 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       UPSTREAM_URLS: http://stub:8001/v1
-      ALLOWED_MODELS: Qwen/Qwen3-8B-AWQ
+      ALLOWED_MODELS: Qwen/Qwen3-8B-GGUF
       API_KEY_STORE_PATH: /app/keys.json
       # Throwaway. A real pepper is injected by the platform and never committed.
       API_KEY_PEPPER: local-dev-pepper-not-a-secret

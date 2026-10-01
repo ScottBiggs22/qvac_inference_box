@@ -77,7 +77,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-STUB_MODEL = "Qwen/Qwen3-8B-AWQ"
+STUB_MODEL = "Qwen/Qwen3-8B-GGUF"
 
 # Filler vocabulary. Domain-flavoured so a human reading a test failure can tell
 # at a glance that they are looking at stub output and not a real answer.

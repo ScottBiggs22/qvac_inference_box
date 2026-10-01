@@ -26,7 +26,7 @@ from gateway.upstream.client import (
 
 
 def _body(**over):
-    b = {"model": "Qwen/Qwen3-8B-AWQ",
+    b = {"model": "Qwen/Qwen3-8B-GGUF",
          "messages": [{"role": "user", "content": "hello"}]}
     b.update(over)
     return b

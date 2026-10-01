@@ -797,18 +797,28 @@ working, and `/metrics` confirmed to have dropped the dead
 **What this session deliberately did NOT do**, because it needs real
 hardware or a real decision this session couldn't make:
 
-- Pick the real model/quant/ctx_size/parallel-slot configuration (`ALLOWED_MODELS`
-  still carries vLLM's `"Qwen/Qwen3-8B-AWQ"` placeholder, which QVAC's
-  llama.cpp-descended engine cannot actually load — opaque to the gateway,
-  not fixed because there's nothing real to replace it with yet).
-- Pin a QVAC Fabric image or measure cold-start time.
-- Decide where TLS/mTLS terminates, given QVAC documents none of its own.
+- Pin a QVAC Fabric image, or measure cold-start time.
 - Build the synthetic wedge-probe follow-up (`wedge.py`'s honest gap: it
   cannot see a wedge with zero real traffic against it).
 - Rewrite `docs/INFERENCE_SERVICE_PRD.md`'s capacity math or
   `docs/VAST_AI_RUNBOOK.md`/`OPERATIONS.md`'s literal launch commands in
-  detail — flagged as needing it, not yet done, given the underlying
-  model/hardware decisions above aren't made.
+  detail — flagged as needing it, not yet done.
+
+**Addendum, same day (2026-09-30):** two of the above turned out to already
+have real answers sitting in this repo's own vLLM-era research, not
+guesses. **Model/quant:** PRD §3.5 already evaluated `Qwen/Qwen3-8B-GGUF`
+(Q4_K_M/Q8_0) and rejected it *for vLLM specifically* — neither reason
+applies to QVAC Fabric, where GGUF is native. `ALLOWED_MODELS` now carries
+`Qwen/Qwen3-8B-GGUF` (Q4_K_M) as a real, reasoned choice rather than a
+format-mismatched placeholder, with redone capacity math suggesting *more*
+headroom than vLLM's measured number — conditional on a new checklist item
+(5b: does QVAC's HTTP server share weights across `parallel` slots the way
+vanilla `llama-server` does). **TLS/mTLS:** turned out not to be a settled
+vLLM decision to transfer either — that work was gateway-side only and
+explicitly deferred to "the real deployment path" (PRD §4.8), never
+validated against a live vLLM. Deferred the same way for this fork's
+initial vast.ai test: plain HTTP, matching that exact precedent. Both are
+now `docs/QVAC_FORK.md` checklist items 5a/5b and 6, updated in place.
 
 **Next action for whoever picks this up:** `docs/QVAC_FORK.md`'s
 verification checklist, in order — it needs rented A10 hardware and follows

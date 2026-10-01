@@ -24,7 +24,7 @@ def _client(key_store, stub_base):
 
 
 def _body(**over):
-    b = {"model": "Qwen/Qwen3-8B-AWQ",
+    b = {"model": "Qwen/Qwen3-8B-GGUF",
          "messages": [{"role": "user", "content": "hello there"}]}
     b.update(over)
     return b

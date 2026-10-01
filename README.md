@@ -158,9 +158,9 @@ DevOps's own answers recorded in PRD §4.1 and §4.4, not from guesswork.
   tested has not been decided. vLLM's own requirement here was a CUDA 13.0
   build needing driver 595.84+/CUDA 13.2 — informative history, not a QVAC
   requirement.
-- **Disk.** ≥30 GB free, pending the real model size once the quant/format
-  choice is made (`docs/QVAC_FORK.md` checklist item 5) — 6 GB was vLLM's
-  AWQ weights plus the HF cache, not necessarily QVAC's footprint.
+- **Disk.** ≥15 GB free — `Qwen/Qwen3-8B-GGUF` Q4_K_M is ~5 GB (vs. vLLM's
+  AWQ weights at ~5.6 GB plus its larger HF-cache/compile-cache footprint),
+  plus image layers. See `docs/QVAC_FORK.md` checklist item 5a.
 - **Network.** Replicas get **no public IP** — private subnet only,
   reachable solely by the gateway.
 - **Fault-domain placement (OCI).** Put the dev VM in a different fault
@@ -185,10 +185,11 @@ as measured or final until that checklist is closed:
   `vllm/vllm-openai:v0.28.0`, model pinned by commit hash — the same
   discipline (pin the image, pin the model revision) should carry over once a
   real image exists.
-- Launch flags: `deploy/k8s/probes.yaml`'s `args:` has the current best guess
-  (`--openai --model=<alias> --ctx-size=8192 --parallel=1`) — the model
-  alias, quant format, and parallel-slot count are all placeholders pending
-  checklist item 5. **8192, not QVAC's raw 1024 default** — the PRD's context
+- Launch flags: `deploy/k8s/probes.yaml`'s `args:` — model and quant are now
+  a real, reasoned choice (`--model=Qwen/Qwen3-8B-GGUF`, Q4_K_M — see
+  `docs/QVAC_FORK.md` checklist item 5a for why), not a guess; the exact
+  file/revision to pin and the `parallel` slot count are still open
+  (item 5b). **8192, not QVAC's raw 1024 default** — the PRD's context
   requirement, and `gateway/routes/chat.py`'s `MAX_COMPLETION_TOKENS`
   injection (2048) would break against the raw default.
 - Whether QVAC Fabric needs an analogous `--no-enable-log-requests`-style

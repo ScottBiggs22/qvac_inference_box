@@ -214,18 +214,22 @@ class Settings(BaseSettings):
     # model string, and a gateway that forwards it blindly lets a tenant reach
     # whatever else that upstream process happens to serve.
     #
-    # "Qwen/Qwen3-8B-AWQ" is carried forward as the default/stub value exactly
-    # as bkn301-inference had it -- this string is opaque to the gateway (it
-    # never inspects what quant format it implies, only whether a caller's
-    # request matches it), so no code here depends on it meaning AWQ. It IS a
-    # real open item, tracked in docs/QVAC_FORK.md checklist item 5: QVAC
-    # Fabric's llama.cpp-descended engine cannot actually load an AWQ file, so
-    # this value must become whatever alias the real chosen GGUF/QVAC-quant
-    # model is served under before this is anything but a placeholder --
-    # deliberately not changed here to avoid a cross-cutting rename of every
-    # test fixture for a decision that hasn't been made yet.
+    # "Qwen/Qwen3-8B-GGUF" -- same model as bkn301-inference's
+    # "Qwen/Qwen3-8B-AWQ", re-quantized for QVAC's llama.cpp-descended engine
+    # (which cannot load an AWQ file at all). PRD §3.5 already evaluated this
+    # exact HF repo (`Qwen/Qwen3-8B-GGUF`, Q4_K_M 5.03 GiB through Q8_0 8.71
+    # GiB) and rejected it FOR VLLM SPECIFICALLY ("highly experimental" GGUF
+    # support, slower than AWQ's tuned Marlin kernels) -- neither reason
+    # applies to QVAC Fabric, where GGUF is the native format. Q4_K_M is the
+    # analogous choice to AWQ's INT4 (same bandwidth-bound reasoning: smaller
+    # weights, faster decode on a memory-bandwidth-limited A10). This string
+    # is still opaque to the gateway -- it never inspects the quant, only
+    # matches the caller's request -- but is no longer a placeholder in the
+    # sense of "wrong format": the remaining open items (real file pinned,
+    # ctx_size/parallel-slot config, measured capacity) are docs/QVAC_FORK.md
+    # checklist item 5.
     ALLOWED_MODELS_CSV: str = Field(
-        default_factory=lambda: os.getenv("ALLOWED_MODELS", "Qwen/Qwen3-8B-AWQ"))
+        default_factory=lambda: os.getenv("ALLOWED_MODELS", "Qwen/Qwen3-8B-GGUF"))
     MAX_BODY_BYTES: int = Field(
         default_factory=lambda: int(os.getenv("MAX_BODY_BYTES", str(1 << 20))))
     # Ceiling on caller-supplied max_tokens. A caller asking for 32k output

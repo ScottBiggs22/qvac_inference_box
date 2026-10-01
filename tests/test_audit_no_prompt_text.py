@@ -49,7 +49,7 @@ class TestWrittenFile:
                 keyid="abc123",
                 subject="key:abc123",
                 auth_method="apikey",
-                model="Qwen/Qwen3-8B-AWQ",
+                model="Qwen/Qwen3-8B-GGUF",
                 status=200,
                 latency_ms=1234.5,
                 prompt_tokens=813,

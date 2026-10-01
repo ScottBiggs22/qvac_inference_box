@@ -54,7 +54,7 @@ def _loadgen_module():
 def _run(out: Path, url: str, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(  # noqa: S603 - interpreter plus literals
         [sys.executable, str(LOADGEN), "--url", f"{url}/v1",
-         "--model", "Qwen/Qwen3-8B-AWQ", "-o", str(out), *args],
+         "--model", "Qwen/Qwen3-8B-GGUF", "-o", str(out), *args],
         cwd=REPO, capture_output=True, text=True, timeout=300,
     )
 

@@ -29,7 +29,7 @@ from gateway.quota import QuotaExceeded, QuotaTracker, quota
 
 
 def _body(**over):
-    b = {"model": "Qwen/Qwen3-8B-AWQ", "messages": [{"role": "user", "content": "hi"}]}
+    b = {"model": "Qwen/Qwen3-8B-GGUF", "messages": [{"role": "user", "content": "hi"}]}
     b.update(over)
     return b
 
@@ -297,7 +297,7 @@ class TestStreamedUsageFeedsTheBudget:
         async with httpx.AsyncClient(timeout=10.0) as ac:
             before_text = (await ac.get(f"{base}/metrics")).text
             before = _metric(before_text, "bkn301_gateway_requests_missing_usage_total",
-                             model="Qwen/Qwen3-8B-AWQ") or 0.0
+                             model="Qwen/Qwen3-8B-GGUF") or 0.0
 
             r = await ac.post(
                 f"{base}/v1/chat/completions",
@@ -309,7 +309,7 @@ class TestStreamedUsageFeedsTheBudget:
 
             after_text = (await ac.get(f"{base}/metrics")).text
             after = _metric(after_text, "bkn301_gateway_requests_missing_usage_total",
-                            model="Qwen/Qwen3-8B-AWQ") or 0.0
+                            model="Qwen/Qwen3-8B-GGUF") or 0.0
 
         assert after == before + 1, (
             "an explicit include_usage=False was overridden by the gateway's "

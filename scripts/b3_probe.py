@@ -168,7 +168,7 @@ def main() -> int:
     ap.add_argument("--direct", action="store_true",
                     help="Recorded in the output: this run bypassed the gateway.")
     ap.add_argument("--api-key", default="")
-    ap.add_argument("--model", default="Qwen/Qwen3-8B-AWQ")
+    ap.add_argument("--model", default="Qwen/Qwen3-8B-GGUF")
     ap.add_argument("-o", "--output", default="logs/b3_probe.jsonl")
     args = ap.parse_args()
 

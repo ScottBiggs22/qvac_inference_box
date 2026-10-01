@@ -10,7 +10,7 @@ import httpx
 
 
 def _body(**over):
-    b = {"model": "Qwen/Qwen3-8B-AWQ", "messages": [{"role": "user", "content": "hi"}]}
+    b = {"model": "Qwen/Qwen3-8B-GGUF", "messages": [{"role": "user", "content": "hi"}]}
     b.update(over)
     return b
 

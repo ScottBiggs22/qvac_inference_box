@@ -16,7 +16,7 @@ import json
 
 import pytest
 
-MODEL = "Qwen/Qwen3-8B-AWQ"
+MODEL = "Qwen/Qwen3-8B-GGUF"
 
 
 def _post(client, key: str, **overrides):

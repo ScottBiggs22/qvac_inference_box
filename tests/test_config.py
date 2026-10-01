@@ -44,15 +44,15 @@ class TestListSettingsFromEnvironment:
         assert Settings().UPSTREAM_URLS == ["http://a:8000/v1", "http://b:8000/v1"]
 
     def test_allowed_models_from_env(self, monkeypatch):
-        monkeypatch.setenv("ALLOWED_MODELS", "Qwen/Qwen3-8B-AWQ,Qwen/Qwen3-8B")
-        assert Settings().ALLOWED_MODELS == ["Qwen/Qwen3-8B-AWQ", "Qwen/Qwen3-8B"]
+        monkeypatch.setenv("ALLOWED_MODELS", "Qwen/Qwen3-8B-GGUF,Qwen/Qwen3-8B")
+        assert Settings().ALLOWED_MODELS == ["Qwen/Qwen3-8B-GGUF", "Qwen/Qwen3-8B"]
 
     def test_defaults_when_unset(self, monkeypatch):
         monkeypatch.delenv("UPSTREAM_URLS", raising=False)
         monkeypatch.delenv("ALLOWED_MODELS", raising=False)
         s = Settings()
         assert s.UPSTREAM_URLS == ["http://127.0.0.1:8001/v1"]
-        assert s.ALLOWED_MODELS == ["Qwen/Qwen3-8B-AWQ"]
+        assert s.ALLOWED_MODELS == ["Qwen/Qwen3-8B-GGUF"]
 
     def test_empty_entries_are_dropped(self, monkeypatch):
         """A trailing comma must not produce an empty upstream URL."""

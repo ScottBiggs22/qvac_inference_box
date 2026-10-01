@@ -152,7 +152,7 @@ class TestCardinalityIsBounded:
         assert gw_metrics.safe_model(model) == "other"
 
     def test_allowlisted_model_survives(self):
-        assert gw_metrics.safe_model("Qwen/Qwen3-8B-AWQ") == "Qwen/Qwen3-8B-AWQ"
+        assert gw_metrics.safe_model("Qwen/Qwen3-8B-GGUF") == "Qwen/Qwen3-8B-GGUF"
 
 
 class TestRegistryInvariant:
