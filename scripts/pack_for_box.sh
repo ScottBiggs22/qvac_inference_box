@@ -68,6 +68,10 @@ trap cleanup EXIT
 
 GIT_INDEX_FILE="$tmpidx" git read-tree HEAD
 GIT_INDEX_FILE="$tmpidx" git add -A .
+# results/ holds committed run output (*.jsonl, boot logs) from prior boxes. It
+# is the numeric baseline, never an input to a run, so it does not travel -- and
+# its *.jsonl files would (correctly) trip the deny-list below.
+GIT_INDEX_FILE="$tmpidx" git rm -r -q --cached --ignore-unmatch results
 manifest=$(GIT_INDEX_FILE="$tmpidx" git ls-files --cached)
 
 echo "=== Manifest: $(printf '%s\n' "$manifest" | grep -c . ) files ==="

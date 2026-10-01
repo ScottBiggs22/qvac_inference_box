@@ -1,0 +1,10 @@
++ python3 -
+REVISION 7c41481f57cb95916b40956ab2f0b139b296d974
+PATH /root/models/Qwen3-8B-Q4_K_M.gguf
++ sha256sum /root/models/Qwen3-8B-Q4_K_M.gguf
+d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785  /root/models/Qwen3-8B-Q4_K_M.gguf
++ ls -l /root/models
+total 4909948
+-rw-r--r-- 1 root root 5027783488 Oct  1 21:42 Qwen3-8B-Q4_K_M.gguf
++ echo DL_DONE
+DL_DONE

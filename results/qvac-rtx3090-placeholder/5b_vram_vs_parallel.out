@@ -1,0 +1,17 @@
+np=1 ctx=8192 extra='' boot_to_health=3.157921609s health=200
+after_load_used_MiB=6018
+0.02.180.247 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 8192, kv_unified = 'false'
+
+np=2 ctx=16384 extra='' boot_to_health=3.167135195s health=200
+after_load_used_MiB=7172
+0.02.192.179 I srv    load_model: initializing, n_slots = 2, n_ctx_slot = 8192, kv_unified = 'false'
+
+np=5 ctx=40960 extra='' boot_to_health=3.178761372s health=200
+after_load_used_MiB=10628
+0.02.217.962 I srv    load_model: initializing, n_slots = 5, n_ctx_slot = 8192, kv_unified = 'false'
+
+np=8 ctx=65536 extra='' boot_to_health=3.186901512s health=200
+after_load_used_MiB=14084
+0.02.252.201 I srv    load_model: initializing, n_slots = 8, n_ctx_slot = 8192, kv_unified = 'false'
+
+1 MiB

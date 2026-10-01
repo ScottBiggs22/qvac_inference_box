@@ -1,0 +1,48 @@
+--- /v1/models noauth:
+401
+--- /v1/models:
+{"models":[{"name":"qwen3-8b","model":"qwen3-8b","modified_at":"","size":"","digest":"","type":"model","description":"","tags":[""],"capabilities":["completion"],"parameters":"","details":{"parent_model":"","format":"gguf","family":"","families":[""],"parameter_size":"","quantization_level":""}}],"object":"list","data":[{"id":"qwen3-8b","aliases":["qwen3-8b"],"tags":[],"object":"model","created":1
+--- /health noauth:
+{"status":"ok"} 200
+--- chat:
+{
+ "choices": [
+  {
+   "finish_reason": "length",
+   "index": 0,
+   "message": {
+    "role": "assistant",
+    "content": "",
+    "reasoning_content": "Okay, the user wants me to say \"hi\" in five words. Let me think about how to approach this.\n\nFirst, I need to make sure that the response is exactly five words. Let me start by thinking of common greetings. \"Hello\" is one word, but that's too short. Maybe \"Hi there\" is two words. Wait, the user specified five words. So I need to expand it. \n\nHow about \"Hello, how are you?\" That's five words. Wait, \"Hello,\" is two words if I count the comma, but commas aren't words. So \"Hello, how are you?\" would be five words: Hello, how, are, you? Wait, no. Let me count again. \"Hello, how are you?\" is \"Hello\" (1), \"how\" (2), \"are\" (3), \"you\" (4), and the question mark isn't a word. So that's four words. Hmm"
+   }
+  }
+ ],
+ "created": 1790891626,
+ "model": "qwen3-8b",
+ "system_fingerprint": "b9240-7bb2161c6",
+ "object": "chat.completion",
+ "usage": {
+  "completion_tokens": 200,
+  "prompt_tokens": 14,
+  "total_tokens": 214,
+  "prompt_tokens_details": {
+   "cached_tokens": 0
+  }
+ },
+ "id": "chatcmpl-Fxi4d8N5flEzVtRhQgVRzkj6SKb4OlDp",
+ "timings": {
+  "cache_n": 0,
+  "prompt_n": 14,
+  "prompt_ms": 32.271,
+  "prompt_per_token_ms": 2.3050714285714284,
+  "prompt_per_second": 433.8260357596604,
+  "predicted_n": 200,
+  "predicted_ms": 1494.056,
+  "predicted_per_token_ms": 7.507819095477387,
+  "predicted_per_second": 133.19447196
+--- metrics head:
+# HELP llamacpp:prompt_tokens_total Number of prompt tokens processed, excluding cached tokens
+# TYPE llamacpp:prompt_tokens_total counter
+llamacpp:prompt_tokens_total 14
+# HELP llamacpp:prompt_tokens_cached_total Number of prompt tokens reused from the cache
+# TYPE llamacpp:prompt_tokens_cached_total counter

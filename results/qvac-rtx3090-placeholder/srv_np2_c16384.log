@@ -1,0 +1,9 @@
+0.00.139.957 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.453.608 I srv    load_model: loading model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.865.466 I cmn  common_init_: fit completed in 0.41 seconds: n_gpu_layers = 99, n_ctx = 16384, moe_cache_size = 0, prefetch_weights = off
+0.01.046.897 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.133.416 I cmn          init: llama threadpool init, n_threads = 16
+0.02.192.179 I srv    load_model: initializing, n_slots = 2, n_ctx_slot = 8192, kv_unified = 'false'
+0.02.201.779 I srv  llama_server: model loaded
+0.02.201.786 I srv  llama_server: listening on http://127.0.0.1:8000
+0.05.159.346 I srv    operator(): operator(): cleaning up before exit...

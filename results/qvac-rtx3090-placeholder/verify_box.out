@@ -1,0 +1,27 @@
+Welcome to vast.ai. If authentication fails, try again after a few seconds, and double check your ssh key.
+Have fun!
+=== Rented box verification ===
+
+GPUs visible: 1
+  0, NVIDIA GeForce RTX 3090, 24576 MiB, 570.211.01
+
+  [32mPASS[0m  exactly one GPU visible
+  [33mWARN[0m  card is 'NVIDIA GeForce RTX 3090' -- PLACEHOLDER for a first-pass build/function check when no A10 is rentable (~936 GB/s vs A10's ~600); tok/s will NOT transfer to the A10 baseline
+  [32mPASS[0m  VRAM 24576 MiB (full 24 GB card)
+  [32mPASS[0m  card is idle (1 MiB used)
+  driver: 570.211.01
+  CUDA Version: 12.8
+  ^ record both: this is the minimum we hand DevOps (Q17)
+  [32mPASS[0m  disk free 59 GB
+
+=== Data hygiene (PRD §4.8) ===
+  [32mPASS[0m  no real-data artefacts present
+  [32mPASS[0m  no retrieval corpus present
+  [32mPASS[0m  no credential-shaped material found
+
+All hard requirements met. Record the driver/CUDA lines above in
+docs/PHASE1_RESULTS.md before pulling any weights.
+
+-- CUDA Toolkit found
+-- The CUDA compiler identification is NVIDIA 12.4.131
+-- Detecting CUDA compiler ABI info

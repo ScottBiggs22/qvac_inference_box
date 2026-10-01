@@ -1,0 +1,31 @@
+=== cold prefix (unique-prefix) ===
+ conc   per-user tok/s      min   aggregate   TTFT p50   TTFT p95   fail
+    1           116.56   116.39       79.97    1907.64    1942.29      0
+    3            31.88    25.44       83.39     2009.3    4108.59      0
+    5            23.03    18.38      100.79    2017.58    7285.82      0
+    8            18.64    14.67      131.34    2866.13   11709.27      0
+R1 gate (>=20 tok/s/user at 5 concurrent): MET (23.03 tok/s/user, ctx~7000 requested)
+=== SSE shape (first frames + last) ===
+data: {"choices":[{"finish_reason":null,"index":0,"delta":{"role":"assistant","content":null}}],"created":1790892253,"id":"chatcmpl-2cjRYBKroEpLxtM4IzNsPeugvkHkY5qM","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.completion.chunk"}
+
+data: {"choices":[{"finish_reason":null,"index":0,"delta":{"content":"<think>"}}],"created":1790892253,"id":"chatcmpl-2cjRYBKroEpLxtM4IzNsPeugvkHkY5qM","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.completion.chunk"}
+...
+data: {"choices":[],"created":1790892253,"id":"chatcmpl-2cjRYBKroEpLxtM4IzNsPeugvkHkY5qM","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.completion.chunk","usage":{"completion_tokens":8,"prompt_tokens":11,"total_tokens":19,"prompt_tok
+
+data: [DONE]
+
+=== freeze test ===
+pid=8283
+STOPPED
+health during freeze: 000 t=5.000101
+timeout/refused (curl exit 28)
+v1/models during freeze: 000 t=5.000501
+timeout/refused (curl exit 28)
+slots during freeze: 000 t=5.000527
+timeout/refused (curl exit 28)
+RESUMED
+inflight_http=200 t=31.660829
+health after: {"status":"ok"} 200
+inflight completed tokens: 1500
+=== logging retention: marker in prompt ===
+marker in server log: 0

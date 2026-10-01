@@ -1,0 +1,15 @@
+Driver Version                                         : 595.84
+CUDA Version                                           : 13.2
+    Product Name                                       : NVIDIA GeForce RTX 3090
+        Current Power Limit                            : 350.00 W
+        Requested Power Limit                          : 350.00 W
+        Default Power Limit                            : 350.00 W
+        Min Power Limit                                : 100.00 W
+        Max Power Limit                                : 350.00 W
+1536000 100000
+Model name:                              AMD Ryzen Threadripper 1950X 16-Core Processor
+instance: vast.ai contract 53759137, machine_id 131560, RTX 3090 (PLACEHOLDER for A10 - none rentable 2026-10-01), $0.2001/hr
+image: nvidia/cuda:12.4.1-devel-ubuntu22.04
+qvac-fabric-llm.cpp commit: 7bb2161c690befa1bb44ff9b20e4eea2da6c22b8 (llama-server 0.1.2-dev build 9240), built -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86
+model: Qwen/Qwen3-8B-GGUF @ 7c41481f57cb95916b40956ab2f0b139b296d974, Qwen3-8B-Q4_K_M.gguf sha256 d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785
+note: first instance (53755131, machine 38986) destroyed after ~45 min: cgroup capped to ~1.9 CPUs, CUDA build would have taken hours

@@ -1,0 +1,11 @@
+warmup: 2 request(s), excluded from all statistics
+
+ conc   per-user tok/s      min   aggregate   TTFT p50   TTFT p95   fail
+----------------------------------------------------------------------------
+    1            117.2   117.14      114.97      76.07      77.43      0
+    3            70.29    53.63      182.34     367.39     1966.2      0
+    5            46.46    42.96      214.81     683.98    1611.75      0
+    8            32.78    30.11      238.38      128.7    2979.31      0
+
+wrote /root/loadgen_direct.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): MET (46.46 tok/s/user, ctx~7000 requested)

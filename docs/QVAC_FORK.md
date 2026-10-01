@@ -72,6 +72,15 @@ window is a documented **1024 tokens** (the PRD requires 8k). It documents
   every request. `ctx_size` **must** be explicitly configured well above
   2048 + a real prompt.
 
+> **UPDATE 2026-10-01:** a first pass ran on an RTX 3090 (no A10 was rentable);
+> see `docs/PHASE1_RESULTS_QVAC.md`. **Several claims above are wrong** — there
+> is no `--openai` flag, `/health` and `/metrics` (`--metrics`) exist, TLS flags
+> exist (`--ssl-*-file`), continuous batching is on by default, and `-c` is the
+> total across `--parallel` slots. Item **5b is resolved** (1152 MiB per 8k
+> slot, weights shared). Items 1, 2, 4, 7, 8 have partial 3090 findings there.
+> `deploy/k8s/probes.yaml` and `README.md` still carry the old flags and are
+> **not yet corrected**.
+
 ## Verification checklist — must be measured on real rented A10 hardware
 
 None of these are resolved by this pass. Each should be checked off here, with

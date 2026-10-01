@@ -274,6 +274,7 @@ name=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)
 case "$name" in
   *A10G*) warn "card is '$name' (A10G, not A10) -- usable, but throughput will NOT transfer to VM.GPU.A10.1" ;;
   *L4*)   bad  "card is '$name' (L4, not A10) -- Ada generation, different memory budget entirely" ;;
+  *3090*) warn "card is '$name' -- PLACEHOLDER for a first-pass build/function check when no A10 is rentable (~936 GB/s vs A10's ~600); tok/s will NOT transfer to the A10 baseline" ;;
   *A10*)  pass "card is '$name'" ;;
   *)      bad  "card is '$name' -- not an A10; PRD §3.3 does not apply" ;;
 esac
