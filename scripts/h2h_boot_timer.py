@@ -155,9 +155,12 @@ def main() -> int:
     ap.add_argument("-o", "--output", required=True)
     ap.add_argument("--timeout", type=float, default=900.0)
     ap.add_argument("--port", type=int, default=8000)
-    ap.add_argument("extra", nargs=argparse.REMAINDER)
-    args = ap.parse_args()
-    extra = [x for x in args.extra if x != "--"]
+    # Engine flags go after a literal `--`; split by hand because argparse's
+    # REMAINDER after positionals swallows the options as well.
+    argv = sys.argv[1:]
+    extra = argv[argv.index("--") + 1:] if "--" in argv else []
+    argv = argv[:argv.index("--")] if "--" in argv else argv
+    args = ap.parse_args(argv)
     env = env_file()
     key = os.environ.get("API_KEY") or env.get("API_KEY")
     serve = REPO / "scripts" / "h2h_serve.sh"

@@ -70,7 +70,7 @@ case "$engine" in
     #   --api-key                          QVAC runs with one; parity
     #   --enable-prompt-tokens-details     per-request cached_tokens in usage
     cmd=(vllm serve "${VLLM_MODEL:-Qwen/Qwen3-8B-AWQ}"
-         --revision "${VLLM_REV:-4da05a8eb55c6046cce958586c33b61da07bb79}"
+         --revision "${VLLM_REV:-4da05a8edb55c6046cce958586c33b61da07bb79}"
          --max-model-len 8192 --gpu-memory-utilization 0.90
          --no-enable-log-requests --no-enable-log-outputs
          --served-model-name qwen3-8b --api-key "$API_KEY"

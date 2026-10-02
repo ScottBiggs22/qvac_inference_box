@@ -139,7 +139,9 @@ _THINK = re.compile(r"<think>.*?</think>", re.S)
 
 def norm(s: str) -> str:
     s = _THINK.sub("", s or "").strip().strip(".").strip()
-    return s.replace(",", "") if re.fullmatch(r"-?[\d,]+", s) else s
+    # Strip thousands separators only: "1,050" -> "1050", but a list like
+    # "2,4,7,9" must stay a list.
+    return s.replace(",", "") if re.fullmatch(r"-?\d{1,3}(,\d{3})+", s) else s
 
 
 def score(case: dict, msg: dict) -> dict:
@@ -219,10 +221,17 @@ def run(args: argparse.Namespace) -> int:
 
 
 def compare(paths: list[str]) -> int:
+    # Answer cases are re-scored from the saved text, so a scorer fix applies
+    # to runs already captured without re-querying the engine.
+    cases = {c["id"]: c for c in answer_cases()}
     runs = []
     for p in paths:
         lines = [json.loads(x) for x in open(p)]
-        runs.append((lines[0]["label"], {x["id"]: x for x in lines if x["kind"] == "case"}))
+        cs = {x["id"]: x for x in lines if x["kind"] == "case"}
+        for i, x in cs.items():
+            if x["family"] == "answer" and x.get("status") == 200:
+                x.update(score(cases[i], {"content": x.get("content")}))
+        runs.append((lines[0]["label"], cs))
     ids = list(runs[0][1])
     print(f"{'family':>8}  " + "  ".join(f"{lab:>14}" for lab, _ in runs))
     for fam in ("answer", "json", "tool"):

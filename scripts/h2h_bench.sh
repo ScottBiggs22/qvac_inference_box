@@ -23,6 +23,8 @@
 #   F_partial shared system block + ~1000-token unique user turn, 1,5,8.
 #   F_cross   cross-slot test: fresh prefix per level, primed by ONE request,
 #             then N concurrent; levels 2,4,8, 3 repeats.
+#   A_warm_short / A_cold_short   7000+512 at 1,5,8, 1 repeat (config variants)
+#   R5        7000+512 at 5 only (reasoning-mode check)
 #
 # Each suite writes OUTDIR/SUITE.jsonl and OUTDIR/SUITE.out. nvidia-smi is
 # sampled once a second into OUTDIR/gpu.csv for the whole invocation.
@@ -53,7 +55,7 @@ trap 'kill $smi 2>/dev/null' EXIT
 run() {
   local suite=$1; shift
   echo "=== $suite  $(date -u +%FT%TZ)" | tee -a "$out/timeline.txt"
-  "$PY" "$REPO/scripts/loadgen.py" "${common[@]}" --tag "$suite" \
+  "$PY" -u "$REPO/scripts/loadgen.py" "${common[@]}" --tag "$suite" \
     -o "$out/$suite.jsonl" "$@" 2>&1 | tee "$out/$suite.out"
   echo "=== $suite done rc=${PIPESTATUS[0]}  $(date -u +%FT%TZ)" | tee -a "$out/timeline.txt"
 }
@@ -79,6 +81,12 @@ for suite in "$@"; do
     F_cross)   run F_cross "${main_shape[@]}" --fresh-prefix-per-level \
                  --levels 2,4,8 --requests 1 --repeats 3 \
                  --warmup 1 --warmup-per-level --warmup-concurrency 1 ;;
+    # Shorter variants for engine-config comparisons (Q8_0, KV quant, -kvu).
+    A_warm_short) run A_warm_short "${main_shape[@]}" --levels 1,5,8 --requests 6 \
+                 "${warm_each[@]}" ;;
+    A_cold_short) run A_cold_short "${main_shape[@]}" --cache-mode cold \
+                 --levels 1,5,8 --requests 6 --warmup 2 ;;
+    R5)        run R5 "${main_shape[@]}" --levels 5 --requests 4 "${warm_each[@]}" ;;
     *) echo "unknown suite $suite" >&2 ;;
   esac
 done
