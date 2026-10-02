@@ -317,6 +317,29 @@ if [ "${avail_gb:-0}" -ge 30 ]; then pass "disk free ${avail_gb} GB"
 else                                 bad "disk free ${avail_gb} GB -- need >=30 GB for weights, image layers and HF cache"
 fi
 
+# ── CPU quota ────────────────────────────────────────────────────────────────
+# `nproc` reports the host's cores, not the container's share. The first QVAC
+# pass hit a box that showed 16 CPUs but was capped by cgroup to ~1.9, and the
+# CUDA build crawled. The loadgen and the server's HTTP/tokenizer threads also
+# share this quota, so a starved box distorts TTFT as well as build time.
+nproc_n=$(nproc 2>/dev/null || echo "?")
+cpumax=$(cat /sys/fs/cgroup/cpu.max 2>/dev/null || true)
+if [ -n "$cpumax" ]; then
+  quota=${cpumax%% *}; period=${cpumax##* }
+  if [ "$quota" = "max" ]; then
+    pass "CPU quota: unlimited (cgroup cpu.max=max), nproc=$nproc_n"
+  else
+    eff=$(awk -v q="$quota" -v p="$period" 'BEGIN { printf "%.1f", q / p }')
+    if awk -v e="$eff" 'BEGIN { exit !(e >= 12) }'; then
+      pass "CPU quota: ${eff} effective cores (cpu.max=$cpumax), nproc=$nproc_n"
+    else
+      warn "CPU quota: only ${eff} effective cores (cpu.max=$cpumax) although nproc=$nproc_n -- builds will crawl and TTFT may be CPU-bound"
+    fi
+  fi
+else
+  warn "no /sys/fs/cgroup/cpu.max (cgroup v1?) -- check the CPU quota by hand; nproc=$nproc_n"
+fi
+
 # ── Data hygiene ─────────────────────────────────────────────────────────────
 # scripts/pack_for_box.sh should make this impossible. Checked anyway, because
 # the cost of being wrong is real user data on a third-party host.
