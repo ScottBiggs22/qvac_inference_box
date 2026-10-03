@@ -1,0 +1,4 @@
+stopped; GPU memory used: 0 MiB
+started vllm as vllm-firstboot (pid 7958), log /root/h2h/logs/vllm-firstboot.log
+{"kind": "boot", "engine": "vllm", "name": "vllm-firstboot", "mode": "cold_full", "extra": [], "model_files": [], "model_bytes": 0, "timestamp": "2026-10-02T17:44:52Z", "compile_caches_removed": ["/tmp/torchinductor_root"], "resident_before_start": null, "t_log_ready_s": 148.22, "t_health_s": 148.22, "t_first_token_s": 148.35, "first_request_status": 200, "second_request_ms": 17.7, "gpu_used_mib_after_load": 20541, "resident_after_load": null, "log": "/root/h2h/logs/vllm-firstboot.log"}
+BOOT_EXIT 0

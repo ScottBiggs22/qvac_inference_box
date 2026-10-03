@@ -1,0 +1,117 @@
++ ts apt_start
+++ date +%s.%N
++ echo 'TS apt_start 1790961867.426276444'
+TS apt_start 1790961867.426276444
++ export DEBIAN_FRONTEND=noninteractive
++ DEBIAN_FRONTEND=noninteractive
++ apt-get update -qq
+W: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
++ apt-get install -y -qq cmake build-essential libcurl4-openssl-dev ccache-
+debconf: delaying package configuration, since apt-utils is not installed
++ ts apt_done
+++ date +%s.%N
++ echo 'TS apt_done 1790961876.183486939'
+TS apt_done 1790961876.183486939
++ cmake --version
++ head -1
+cmake version 3.28.3
++ nvcc --version
++ tail -1
+Build cuda_13.0.r13.0/compiler.36424714_0
++ ts clone_start
+++ date +%s.%N
++ echo 'TS clone_start 1790961876.196075821'
+TS clone_start 1790961876.196075821
++ git clone -q https://github.com/tetherto/qvac-fabric-llm.cpp /root/qvac
++ cd /root/qvac
++ git checkout -q 7bb2161c690befa1bb44ff9b20e4eea2da6c22b8
++ git rev-parse HEAD
+7bb2161c690befa1bb44ff9b20e4eea2da6c22b8
++ ts clone_done
+++ date +%s.%N
++ echo 'TS clone_done 1790962024.167396729'
+TS clone_done 1790962024.167396729
++ ts configure_start
+++ date +%s.%N
++ echo 'TS configure_start 1790962024.168693224'
+TS configure_start 1790962024.168693224
++ cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86 -DCMAKE_BUILD_TYPE=Release
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- llama.cpp version: 0.1.2-dev
+CMAKE_BUILD_TYPE=Release
+-- Found Git: /usr/bin/git (found version "2.43.0") 
+-- The ASM compiler identification is GNU
+-- Found assembler: /usr/bin/cc
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Warning: ccache not found - consider installing it for faster compilation or disable this warning with GGML_CCACHE=OFF
+-- CMAKE_SYSTEM_PROCESSOR: x86_64
+-- GGML_SYSTEM_ARCH: x86
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- Found OpenMP: TRUE (found version "4.5")  
+-- Including CPU backend
+-- x86 detected
+-- Adding CPU backend variant ggml-cpu: -march=native 
+-- Found CUDAToolkit: /usr/local/cuda/targets/x86_64-linux/include (found version "13.0.88") 
+-- CUDA Toolkit found
+-- The CUDA compiler identification is NVIDIA 13.0.88
+-- Detecting CUDA compiler ABI info
+-- Detecting CUDA compiler ABI info - done
+-- Check for working CUDA compiler: /usr/local/cuda/bin/nvcc - skipped
+-- Detecting CUDA compile features
+-- Detecting CUDA compile features - done
+-- Using CMAKE_CUDA_ARCHITECTURES=86 CMAKE_CUDA_ARCHITECTURES_NATIVE=86-real
+-- Could NOT find NCCL (missing: NCCL_LIBRARY NCCL_INCLUDE_DIR) 
+-- Warning: NCCL not found, performance for multiple CUDA GPUs will be suboptimal
+-- CUDA host compiler is GNU 13.3.0
+-- Including CUDA backend
+-- ggml version: 0.20.2
+-- ggml commit:  7bb2161c6
+-- Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR (missing: OPENSSL_CRYPTO_LIBRARY OPENSSL_INCLUDE_DIR) 
+CMake Warning at vendor/cpp-httplib/CMakeLists.txt:155 (message):
+  OpenSSL not found, HTTPS support disabled
+
+
+-- Generating embedded license file for target: llama-app
+-- Generating embedded license file for target: llama-common
+-- Configuring done (3.6s)
+-- Generating done (0.3s)
+-- Build files have been written to: /root/qvac/build
++ ts configure_done
+++ date +%s.%N
++ echo 'TS configure_done 1790962028.110210974'
+TS configure_done 1790962028.110210974
++ ts build_start
+++ date +%s.%N
++ echo 'TS build_start 1790962028.112045385'
+TS build_start 1790962028.112045385
++ /usr/bin/time -v cmake --build build --config Release -j 23 --target llama-server llama-bench
+/root/h2h/build_qvac.sh: line 18: /usr/bin/time: No such file or directory
++ ts build_done
+++ date +%s.%N
++ echo 'TS build_done 1790962028.114528121'
+TS build_done 1790962028.114528121
++ ls -la build/bin/
+total 4
+drwxr-xr-x  2 root root    6 Oct  2 17:27 .
+drwxr-xr-x 15 root root 4096 Oct  2 17:27 ..
++ du -sh build/bin build
+0	build/bin
+17M	build
++ ./build/bin/llama-server --version
+/root/h2h/build_qvac.sh: line 22: ./build/bin/llama-server: No such file or directory
++ echo BUILD_DONE
+BUILD_DONE

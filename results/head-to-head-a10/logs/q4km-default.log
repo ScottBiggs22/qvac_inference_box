@@ -1,0 +1,18 @@
+0.00.057.600 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.148.132 I srv    load_model: loading model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.411.579 I cmn  common_init_: fit completed in 0.26 seconds: n_gpu_layers = 99, n_ctx = 65536, moe_cache_size = 0, prefetch_weights = off
+0.00.549.000 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.298.033 I cmn          init: llama threadpool init, n_threads = 48
+0.01.420.688 I srv    load_model: initializing, n_slots = 8, n_ctx_slot = 8192, kv_unified = 'false'
+0.01.428.815 I srv  llama_server: model loaded
+0.01.428.822 I srv  llama_server: listening on http://127.0.0.1:8000
+0.01.510.470 I slot get_availabl: id  7 | task -1 | selected slot by LRU, t_last = -1
+0.01.510.537 I slot launch_slot_: id  7 | task 0 | processing task, is_child = 0
+0.01.631.566 I slot print_timing: id  7 | task 0 | prompt eval time =      32.96 ms /    22 tokens (    1.50 ms per token,   667.46 tokens per second)
+0.01.631.569 I slot print_timing: id  7 | task 0 |        eval time =      88.04 ms /     8 tokens (   12.58 ms per token,    79.51 tokens per second)
+0.01.631.570 I slot print_timing: id  7 | task 0 |       total time =     121.00 ms /    30 tokens
+0.01.631.574 I slot print_timing: id  7 | task 0 |    graphs reused =          7
+0.01.631.608 I slot      release: id  7 | task 0 | stop processing: n_tokens = 29, truncated = 0
+0.02.663.065 W srv    operator(): unauthorized: Invalid API Key
+0.02.669.399 W srv    operator(): unauthorized: Invalid API Key
+0.02.998.260 I srv    operator(): operator(): cleaning up before exit...

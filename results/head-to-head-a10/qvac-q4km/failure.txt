@@ -1,0 +1,43 @@
+[02:02:35.823] === qvac / q4km-fail failure probes (steps: sse oversized storm freeze sigterm  freeze=group)
+[02:02:40.759] SSE direct: 12 frames
+[02:02:40.765]   first: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"role":"assistant","content":null}}],"created":1790992960,"id":"chatcmpl-z6cyCZqQWk860RFZtRmsKDGaIQ0kB5l2","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.c
+[02:02:40.770]   last-2: data: {"choices":[],"created":1790992960,"id":"chatcmpl-z6cyCZqQWk860RFZtRmsKDGaIQ0kB5l2","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.completion.chunk","usage":{"completion_tokens":8,"prompt_tokens":17,"total_tokens":25,"prompt_tokens_details":{"cached_tokens":1}},"timin
+[02:02:40.776]   last: data: [DONE]
+[02:02:40.991] SSE gateway: 12 frames
+[02:02:40.996]   first: data: {"choices":[{"finish_reason":null,"index":0,"delta":{"role":"assistant","content":null}}],"created":1790992960,"id":"chatcmpl-SZIVIPu4pv0c2NyVICVPM5Ci7HH2AbJm","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.c
+[02:02:41.003]   last-2: data: {"choices":[],"created":1790992960,"id":"chatcmpl-SZIVIPu4pv0c2NyVICVPM5Ci7HH2AbJm","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.completion.chunk","usage":{"completion_tokens":8,"prompt_tokens":17,"total_tokens":25,"prompt_tokens_details":{"cached_tokens":16}},"timi
+[02:02:41.009]   last: data: [DONE]
+[02:02:41.134] oversized direct:  HTTP 400 {"error":{"code":400,"message":"request (9012 tokens) exceeds the available context size (8192 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":9012,"n_ctx":8192}} HTTP 400
+[02:02:41.225] oversized gateway:  HTTP 400 {"detail":"prompt_too_long"} HTTP 400
+[02:02:41.227] disconnect storm: 16 streams cut at 1 s
+[02:02:47.259]   after storm: health 200 0.000727s
+[02:02:47.948]   normal request: 200 0.673613s
+[02:02:47.977]   slots processing: 0 of 8
+[02:02:47.982] freeze target: whole process group 45341
+[02:02:50.988] freeze: SIGSTOP
+[02:02:59.048]   t+0s engine /health 000 3.002253s | /v1/models 000 3.002272s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:03:14.102]   t+10s engine /health 000 3.002242s | /v1/models 000 3.002271s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:03:29.157]   t+20s engine /health 000 3.002241s | /v1/models 000 3.002219s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:03:44.220]   t+30s engine /health 000 3.002270s | /v1/models 000 3.002256s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:03:59.281]   t+40s engine /health 000 3.002265s | /v1/models 000 3.002287s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:04:14.339]   t+50s engine /health 000 3.001942s | /v1/models 000 3.002206s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:04:29.400]   t+60s engine /health 000 3.002258s | /v1/models 000 3.002276s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:04:44.459]   t+70s engine /health 000 3.002258s | /v1/models 000 3.002257s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:04:59.516]   t+80s engine /health 000 3.002251s | /v1/models 000 3.002247s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:05:14.575]   t+90s engine /health 000 3.002258s | /v1/models 000 3.002240s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:05:29.635]   t+100s engine /health 000 3.002043s | /v1/models 000 3.002271s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:05:44.691]   t+110s engine /health 000 3.002240s | /v1/models 000 3.002237s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:05:59.751]   t+120s engine /health 000 3.002229s | /v1/models 000 3.002263s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:06:14.810]   t+130s engine /health 000 3.002241s | /v1/models 000 3.002239s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:06:29.866]   t+140s engine /health 000 3.002252s | /v1/models 000 3.002263s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:06:44.924]   t+150s engine /health 000 3.002248s | /v1/models 000 3.002222s | gw /readyz 503 | wedge wedge_suspected=0.0 wedge_stall_seconds=0.0 
+[02:06:51.933] freeze: SIGCONT sent
+[02:06:56.964]   after CONT: health 200 0.000358s | gw readyz 200 0.007108s
+[02:06:56.972]   frozen client stream: 400 frames, last: 7503103876397,"predicted_n":397,"predicted_ms":246162.791,"predicted_per_token_ms":621.6232095959596,"predicted_per_second":1.6086915426629202}}  data: [DONE]  
+[02:07:00.980] SIGTERM -> 45341
+[02:07:01.618]   engine exited after 0.63 s
+[02:07:01.630]   client: curl rc=18, 303 frames, [DONE]=0, tail: eated":1790993220,"id":"chatcmpl-vLsH56mSOl04T4zJPD4yC7Pjsyn5WHh8","model":"qwen3-8b","system_fingerprint":"b9240-7bb2161c6","object":"chat.completion.chunk"}  
+[02:07:01.643]   gw readyz with engine down: 503 0.002738s
+[02:07:03.317]   restart to /health: 1.66 s
+[02:07:05.338]   gw readyz after restart: 200 0.006860s
+[02:07:05.341] === done

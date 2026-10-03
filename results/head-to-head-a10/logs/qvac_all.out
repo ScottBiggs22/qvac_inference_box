@@ -1,0 +1,76 @@
+STEP boots 21:16:28
+   q4km-boot1-warm 1.0 1.61 1.75 14051 None
+   q4km-boot2-cold_weights 0.0 2.98 3.13 14051 None
+   q4km-boot3-warm 1.0 1.52 1.66 14051 None
+   q4km-boot4-cold_weights 0.0 2.96 3.1 14051 None
+   q4km-boot5-warm 1.0 1.53 1.67 14051 None
+   q4km-boot6-cold_weights 0.0 2.96 3.11 14051 None
+   q4km-boot7-warm 1.0 1.52 1.66 14051 None
+STEP main 21:16:51
+  q4km-main up: 14051 MiB
+  bench /root/h2h/out/qvac-q4km smoke A_warm A_cold F_partial F_cross B_legacy C_short D_long E_sat: done
+STEP kvvariants 23:19:08
+HANDOFF 23:19:11: relaunching cram0full kvvariants sat q8 reasoning quality gateway failure obs
+STEP cram0full 23:19:11
+  q4km-cram0full up: 14051 MiB
+  bench /root/h2h/out/qvac-q4km-cram0 A_warm_r2: done
+  bench /root/h2h/out/qvac-q4km-cram0 A_cold_r2: done
+STEP kvvariants 00:16:36
+  q4km-cram0 up: 14051 MiB
+  bench /root/h2h/out/qvac-q4km-cram0 F_cross F_partial: done
+  q4km-kvu up: 14105 MiB
+  bench /root/h2h/out/qvac-q4km-kvu F_cross A_warm_short A_cold_short: done
+  q4km-kvq8 up: 9931 MiB
+  bench /root/h2h/out/qvac-q4km-kvq8 A_warm_short A_cold_short: done
+STEP sat 01:22:06
+  q4km-np12 up: 18659 MiB
+  bench /root/h2h/out/qvac-q4km-np12 E_sat: done
+  q4km-np16: did not come up
+0.01.512.339 E cmn  common_init_: failed to create context with model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.01.512.343 E cmn  common_init_: failed to create context with model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.01.512.345 E srv    load_model: failed to create_context with model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.01.512.347 I srv    operator(): operator(): cleaning up before exit...
+0.01.517.201 E srv  llama_server: exiting due to model loading error
+  np16 f16 KV: failed to load (see log)
+  q4km-np16-kvq8 up: 15083 MiB
+  bench /root/h2h/out/qvac-q4km-np16-kvq8 E_sat: done
+  q4km-np20-kvq8 up: 17659 MiB
+  q4km-np24-kvq8 up: 20235 MiB
+STEP q8 01:35:53
+   q8-boot-cold_weights 1.56 14051 None
+   q8-boot-warm 1.52 14051 None
+  bench /root/h2h/out/qvac-q8 smoke A_warm_short A_cold_short: done
+STEP reasoning 01:53:22
+  q4km-reason-off up: 14051 MiB
+  bench /root/h2h/out/qvac-q4km-reasoning-off R5: done
+STEP quality 01:55:13
+  q4km-quality up: 14051 MiB
+  q8-quality up: 14051 MiB
+    family        vllm-awq       qvac-q4km         qvac-q8
+    answer           31/40           32/40           32/40
+      json             5/5             0/5             0/5
+      tool             5/5             5/5             5/5
+  exact-text agreement vllm-awq vs qvac-q4km (answer family): 0/40
+  exact-text agreement vllm-awq vs qvac-q8 (answer family): 0/40
+STEP gateway 01:55:32
+  q4km-gw up: 14051 MiB
+  gw readyz: {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+      5   0      29.87   29.73   130.07   132.57    2556.26  2603.56     77.17   99.8    0
+      8   0      20.09   20.07   137.34   140.41    4400.64   4439.7    116.34   99.8    0
+  
+  wrote /root/h2h/out/qvac-q4km/G_gateway.jsonl
+  R1 gate (>=20 tok/s/user at 5 concurrent): MET (worst repeat 29.87 tok/s/user, prompt=7000 tokens, cache=warm)
+  GW_DONE rc=0
+STEP failure 02:02:35
+  failure probes done
+STEP obs 02:07:05
+  q4km-verbose up: 14051 MiB
+  canary in -v stdout log: 0
+  canary in --log-file: 0
+n/a
+  q4km-default up: 14051 MiB
+  canary in default log: 0
+  metrics series: 15; slot prompt text in /slots: 0
+  /metrics without key: 401  /slots without key: 401
+  TLS /health: 000  plain http on TLS port: 000
+STEP ALL_DONE 02:07:20

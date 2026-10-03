@@ -1,0 +1,11 @@
+box: vast.ai offer 47574078 machine 123534 instance 53892101, Illinois US
+NVIDIA A10, 23028 MiB, 595.84
+CUDA Version: 13.2
+cpu.max: 2304000 100000
+Build cuda_13.0.r13.0/compiler.36424714_0
+Version: 0.28.0
+ERROR: Pipe to stdout was broken
+version: 0.1.2-dev (build 9240, commit 7bb2161c6)
+built with GNU 13.3.0 for Linux x86_64
+d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785  Qwen3-8B-Q4_K_M.gguf
+408b955510e196121c1c375201744783b5c9a43c7956d73fc78df54c66e883d6  Qwen3-8B-Q8_0.gguf

@@ -1,0 +1,10 @@
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      69.69   69.65     69.0    69.02      92.08    94.05     23.21   99.8    0
+    5   0      29.67   29.65   130.15   132.55    2449.79  2517.88     80.65   99.8    0
+    8   0      20.17   20.15   138.26   141.31    4286.38  4353.66    119.41   99.8    0
+
+wrote /root/h2h/out/qvac-q8/A_warm_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): MET (worst repeat 29.67 tok/s/user, prompt=7000 tokens, cache=warm)

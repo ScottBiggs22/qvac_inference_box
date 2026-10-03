@@ -1,0 +1,25 @@
+0.00.058.547 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.152.225 I srv    load_model: loading model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.417.705 I cmn  common_init_: fit completed in 0.27 seconds: n_gpu_layers = 99, n_ctx = 65536, moe_cache_size = 0, prefetch_weights = off
+0.00.557.193 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.741.762 I cmn          init: llama threadpool init, n_threads = 48
+0.02.864.715 I srv    load_model: initializing, n_slots = 8, n_ctx_slot = 8192, kv_unified = 'false'
+0.02.872.873 I srv  llama_server: model loaded
+0.02.872.879 I srv  llama_server: listening on http://127.0.0.1:8000
+0.03.012.559 I slot get_availabl: id  7 | task -1 | selected slot by LRU, t_last = -1
+0.03.012.625 I slot launch_slot_: id  7 | task 0 | processing task, is_child = 0
+0.03.045.006 I slot print_timing: id  7 | task 0 | prompt eval time =      32.35 ms /    11 tokens (    2.94 ms per token,   339.99 tokens per second)
+0.03.045.010 I slot print_timing: id  7 | task 0 |        eval time =       0.00 ms /     1 tokens (    0.00 ms per token,     0.00 tokens per second)
+0.03.045.011 I slot print_timing: id  7 | task 0 |       total time =      32.35 ms /    12 tokens
+0.03.045.014 I slot print_timing: id  7 | task 0 |    graphs reused =          1
+0.03.045.045 I slot      release: id  7 | task 0 | stop processing: n_tokens = 11, truncated = 0
+0.03.051.713 I slot get_availabl: id  7 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 1.000
+0.03.051.879 I slot launch_slot_: id  7 | task 2 | processing task, is_child = 0
+0.03.051.904 W slot   operator(): id  7 | task 2 | need to evaluate at least 1 token for each active slot (n_past = 11, task.n_tokens() = 11)
+0.03.051.907 W slot   operator(): id  7 | task 2 | n_past was set to 10
+0.03.065.187 I slot print_timing: id  7 | task 2 | prompt eval time =      13.28 ms /     1 tokens (   13.28 ms per token,    75.29 tokens per second)
+0.03.065.190 I slot print_timing: id  7 | task 2 |        eval time =       0.00 ms /     1 tokens (    0.00 ms per token,     0.00 tokens per second)
+0.03.065.192 I slot print_timing: id  7 | task 2 |       total time =      13.28 ms /     2 tokens
+0.03.065.192 I slot print_timing: id  7 | task 2 |    graphs reused =          1
+0.03.065.201 I slot      release: id  7 | task 2 | stop processing: n_tokens = 11, truncated = 0
+0.03.426.295 I srv    operator(): operator(): cleaning up before exit...

@@ -1,0 +1,13 @@
+0.00.054.950 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.149.924 I srv    load_model: loading model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.658.906 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort
+0.00.658.919 W cmn  common_init_: fit failed after 0.51 seconds; continuing with original parameters
+0.00.794.535 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.511.174 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 18432.00 MiB on device 0: cudaMalloc failed: out of memory
+0.01.511.180 E alloc_tensor_range: failed to allocate CUDA0 buffer of size 19327352832
+0.01.512.332 E llama_init_from_model: failed to initialize the context: failed to allocate buffer for kv cache
+0.01.512.339 E cmn  common_init_: failed to create context with model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.01.512.343 E cmn  common_init_: failed to create context with model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.01.512.345 E srv    load_model: failed to create_context with model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.01.512.347 I srv    operator(): operator(): cleaning up before exit...
+0.01.517.201 E srv  llama_server: exiting due to model loading error

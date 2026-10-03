@@ -1,0 +1,1 @@
+vllm serve Qwen/Qwen3-8B-AWQ --revision 4da05a8edb55c6046cce958586c33b61da07bb79 --max-model-len 8192 --gpu-memory-utilization 0.90 --no-enable-log-requests --no-enable-log-outputs --served-model-name qwen3-8b --api-key REDACTED --enable-prompt-tokens-details --host 127.0.0.1 --port 8000 

@@ -1,0 +1,35 @@
++ cd /root/models
++ for f in Qwen3-8B-Q4_K_M.gguf Qwen3-8B-Q8_0.gguf
+++ date +%s.%N
++ echo 'TS dl_start_Qwen3-8B-Q4_K_M.gguf 1790961867.426241194'
+TS dl_start_Qwen3-8B-Q4_K_M.gguf 1790961867.426241194
++ hf download Qwen/Qwen3-8B-GGUF Qwen3-8B-Q4_K_M.gguf --revision 7c41481f57cb95916b40956ab2f0b139b296d974 --local-dir /root/models
+[90mHint: A new version of huggingface_hub (2.1.1) is available! You are using version 1.28.0.
+To update, run: hf update[0m
+[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g --claude` to teach your AI agents how to use the `hf` CLI.[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[32m✓ Downloaded[0m
+  path: /root/models/Qwen3-8B-Q4_K_M.gguf
+++ date +%s.%N
++ echo 'TS dl_done_Qwen3-8B-Q4_K_M.gguf 1790961913.787931133'
+TS dl_done_Qwen3-8B-Q4_K_M.gguf 1790961913.787931133
++ sha256sum Qwen3-8B-Q4_K_M.gguf
+d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785  Qwen3-8B-Q4_K_M.gguf
++ for f in Qwen3-8B-Q4_K_M.gguf Qwen3-8B-Q8_0.gguf
+++ date +%s.%N
++ echo 'TS dl_start_Qwen3-8B-Q8_0.gguf 1790961918.433420214'
+TS dl_start_Qwen3-8B-Q8_0.gguf 1790961918.433420214
++ hf download Qwen/Qwen3-8B-GGUF Qwen3-8B-Q8_0.gguf --revision 7c41481f57cb95916b40956ab2f0b139b296d974 --local-dir /root/models
+[32m✓ Downloaded[0m
+  path: /root/models/Qwen3-8B-Q8_0.gguf
+++ date +%s.%N
++ echo 'TS dl_done_Qwen3-8B-Q8_0.gguf 1790961995.240753194'
+TS dl_done_Qwen3-8B-Q8_0.gguf 1790961995.240753194
++ sha256sum Qwen3-8B-Q8_0.gguf
+408b955510e196121c1c375201744783b5c9a43c7956d73fc78df54c66e883d6  Qwen3-8B-Q8_0.gguf
++ ls -l /root/models
+total 13415340
+-rw-r--r-- 1 root root 5027783488 Oct  2 17:25 Qwen3-8B-Q4_K_M.gguf
+-rw-r--r-- 1 root root 8709518112 Oct  2 17:26 Qwen3-8B-Q8_0.gguf
++ echo DL_DONE
+DL_DONE

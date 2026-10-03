@@ -1,0 +1,1 @@
+/root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 196608 -np 24 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format none --host 127.0.0.1 --port 8000 -ctk q8_0 -ctv q8_0 

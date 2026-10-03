@@ -1,0 +1,42 @@
+[19:56:37.744] === vllm / vllm-fail failure probes
+[19:56:37.908] SSE direct: 11 frames
+[19:56:37.915]   first: data: {"id":"chatcmpl-a023cfe7e0ac400c","object":"chat.completion.chunk","created":1790970997,"model":"qwen3-8b","choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}],"prompt_token_ids":null,
+[19:56:37.919]   last-2: data: {"id":"chatcmpl-a023cfe7e0ac400c","object":"chat.completion.chunk","created":1790970997,"model":"qwen3-8b","choices":[],"usage":{"prompt_tokens":17,"total_tokens":25,"completion_tokens":8,"prompt_tokens_details":{"cached_tokens":0,"created_cache_tokens":16}},"system_fingerprint":"vllm-0.28.0-c
+[19:56:37.924]   last: data: [DONE]
+[19:56:38.138] SSE gateway: 11 frames
+[19:56:38.144]   first: data: {"id":"chatcmpl-9f5d40b5c3a4b8e0","object":"chat.completion.chunk","created":1790970998,"model":"qwen3-8b","choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}],"prompt_token_ids":null,
+[19:56:38.150]   last-2: data: {"id":"chatcmpl-9f5d40b5c3a4b8e0","object":"chat.completion.chunk","created":1790970998,"model":"qwen3-8b","choices":[],"usage":{"prompt_tokens":17,"total_tokens":25,"completion_tokens":8,"prompt_tokens_details":{"cached_tokens":16,"created_cache_tokens":0}},"system_fingerprint":"vllm-0.28.0-c
+[19:56:38.155]   last: data: [DONE]
+[19:56:38.261] oversized direct:  HTTP 400 {"error":{"message":"This model's maximum context length is 8192 tokens. However, you requested 16 output tokens and your prompt contains at least 8177 input tokens, for a total of at least 8193 tokens. Please reduce the length of the input prompt or the numbe
+[19:56:38.355] oversized gateway:  HTTP 400 {"detail":"prompt_too_long"} HTTP 400
+[19:56:38.382] disconnect storm: 16 streams cut at 1 s
+[19:56:44.412]   after storm: health 200 0.001621s 
+[19:56:44.421]   normal request: 000 timeout
+[19:56:44.449]   running/waiting: vllm:num_requests_running{engine="0",model_name="qwen3-8b"}=0.0 vllm:num_requests_waiting{engine="0",model_name="qwen3-8b"}=0.0 vllm:num_requests_waiting_by_reason{engine="0",model_name="qwen3-8b",reason="capacity"}=0.0 vllm:num_requests_waiting_by_reason{engine="0",model_name="qwen3-8b",reason="deferred"}=0.0 
+[19:56:47.457] freeze: kill -STOP -- -19504
+[19:57:05.518]   t+0s engine /health 000 3.002202s000 3.002269s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.006449s000 8.002434s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[19:57:30.582]   t+10s engine /health 000 3.002248s000 3.002310s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.005688s000 8.002370s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[19:57:55.648]   t+20s engine /health 000 3.002257s000 3.002335s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.005920s000 8.002402s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[19:58:20.714]   t+30s engine /health 000 3.002276s000 3.002349s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.006674s000 8.002434s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[19:58:45.777]   t+40s engine /health 000 3.002256s000 3.002270s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.006683s000 8.002427s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[19:59:10.842]   t+50s engine /health 000 3.002247s000 3.002260s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.006012s000 8.002430s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[19:59:35.913]   t+60s engine /health 000 3.002276s000 3.002349s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.007744s000 8.002427s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:00:00.981]   t+70s engine /health 000 3.002265s000 3.002332s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.006913s000 8.002477s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:00:26.041]   t+80s engine /health 000 3.002277s000 3.002196s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.007273s000 8.001780s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:00:51.102]   t+90s engine /health 000 3.002258s000 3.002257s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.006387s000 8.002416s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:01:16.169]   t+100s engine /health 000 3.002273s000 3.002301s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.007283s000 8.002423s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:01:41.229]   t+110s engine /health 000 3.002258s000 3.002263s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.004067s000 8.002414s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:02:06.293]   t+120s engine /health 000 3.002234s000 3.002231s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.003494s000 8.002372s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:02:31.353]   t+130s engine /health 000 3.002264s000 3.002356s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.002986s000 8.002402s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:02:56.411]   t+140s engine /health 000 3.002246s000 3.002342s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.002930s000 8.002688s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:03:21.471]   t+150s engine /health 000 3.002243s000 3.002232s000 timeout | /v1/models 000 timeout | gw /readyz 503 2.003277s000 8.002406s000 timeout {"status":"unavailable","upstreams":{"http://127.0.0.1:8000/v1":false},"breakers":{"http://127.0.0.1:8000/v1":"closed"}}
+[20:03:28.483] freeze: SIGCONT sent
+[20:03:41.516]   after CONT: health 200 0.000793s | gw readyz 200 0.003729s000 8.002347s000 timeout
+[20:03:41.525]   frozen client stream: 218 frames, last: tion.chunk","created":1790971004,"model":"qwen3-8b","choices":[{"index":0,"delta":{"content":" kept"},"logprobs":null,"finish_reason":null,"token_ids":null}]}  
+[20:03:45.532] SIGTERM -> 19504
+[20:05:42.271]   engine exited after 116.74 s
+[20:05:42.284]   client: curl rc=28, 299 frames, [DONE]=0, tail: on.chunk","created":1790971421,"model":"qwen3-8b","choices":[{"index":0,"delta":{"content":" ledger"},"logprobs":null,"finish_reason":null,"token_ids":null}]}  
+[20:05:50.302]   gw readyz with engine down: 503 0.002541s000 8.002350s000 timeout
+[20:06:31.544]   restart to /health: 41.23 s
+[20:06:41.567]   gw readyz after restart: 200 0.006032s000 8.002439s000 timeout
+[20:06:41.571] === done

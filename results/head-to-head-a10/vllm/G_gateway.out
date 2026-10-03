@@ -1,0 +1,11 @@
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      68.67   68.64    66.95    67.13     206.03   209.37     40.39   99.7    0
+    5   0      45.66   45.55   224.17   224.81     209.31   296.81     53.98   99.7    0
+    8   0       43.3   43.19   339.61   340.67     235.84   353.54     68.22   99.7    0
+
+wrote /root/h2h/out/vllm/G_gateway.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): MET (worst repeat 45.66 tok/s/user, prompt=7000 tokens, cache=warm)
+GW_DONE rc=0

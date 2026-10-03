@@ -1,0 +1,18 @@
+=== smoke  2026-10-02T21:16:53Z
+=== smoke done rc=0  2026-10-02T21:17:04Z
+=== A_warm  2026-10-02T21:17:04Z
+=== A_warm done rc=0  2026-10-02T21:58:18Z
+=== A_cold  2026-10-02T21:58:18Z
+=== A_cold done rc=0  2026-10-02T22:52:03Z
+=== F_partial  2026-10-02T22:52:03Z
+=== F_partial done rc=0  2026-10-02T22:57:37Z
+=== F_cross  2026-10-02T22:57:37Z
+=== F_cross done rc=0  2026-10-02T23:04:11Z
+=== B_legacy  2026-10-02T23:04:11Z
+=== B_legacy done rc=0  2026-10-02T23:09:17Z
+=== C_short  2026-10-02T23:09:17Z
+=== C_short done rc=0  2026-10-02T23:11:43Z
+=== D_long  2026-10-02T23:11:43Z
+=== D_long done rc=0  2026-10-02T23:13:50Z
+=== E_sat  2026-10-02T23:13:50Z
+=== E_sat done rc=0  2026-10-02T23:19:08Z

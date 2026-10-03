@@ -1,0 +1,8 @@
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+   12   0       20.3   20.28   126.08   163.12   23516.18 24822.86    208.47   99.8    0
+   16   0      20.23   16.48   105.86   243.06   25355.99 75946.03    174.83   99.8    0
+
+wrote /root/h2h/out/qvac-q4km-np12/E_sat.jsonl

@@ -1,0 +1,102 @@
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:333] 
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:333]        █     █     █▄   ▄█
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:333]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.28.0
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:333]   █▄█▀ █     █     █     █  model   Qwen/Qwen3-8B-AWQ
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:333]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:333] 
+(APIServer pid=7708) INFO 10-02 17:37:38 [api_utils.py:272] non-default args: {'model_tag': 'Qwen/Qwen3-8B-AWQ', 'enable_prompt_tokens_details': True, 'host': '127.0.0.1', 'api_key': ['REDACTED'], 'model': 'Qwen/Qwen3-8B-AWQ', 'revision': '4da05a8eb55c6046cce958586c33b61da07bb79', 'max_model_len': 8192, 'served_model_name': ['qwen3-8b'], 'gpu_memory_utilization': 0.9}
+(APIServer pid=7708) Traceback (most recent call last):
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_http.py", line 798, in hf_raise_for_status
+(APIServer pid=7708)     response.raise_for_status()
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/httpx/_models.py", line 829, in raise_for_status
+(APIServer pid=7708)     raise HTTPStatusError(message, request=request, response=self)
+(APIServer pid=7708) httpx.HTTPStatusError: Client error '404 Not Found' for url 'https://huggingface.co/Qwen/Qwen3-8B-AWQ/resolve/4da05a8eb55c6046cce958586c33b61da07bb79/config.json'
+(APIServer pid=7708) For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+(APIServer pid=7708) 
+(APIServer pid=7708) The above exception was the direct cause of the following exception:
+(APIServer pid=7708) 
+(APIServer pid=7708) Traceback (most recent call last):
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/transformers/utils/hub.py", line 438, in cached_files
+(APIServer pid=7708)     hf_hub_download(
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+(APIServer pid=7708)     return fn(*args, **kwargs)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1019, in hf_hub_download
+(APIServer pid=7708)     return _hf_hub_download_to_cache_dir(
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1089, in _hf_hub_download_to_cache_dir
+(APIServer pid=7708)     (url_to_download, etag, commit_hash, expected_size, xet_file_data, head_call_error) = _get_metadata_or_catch_error(
+(APIServer pid=7708)                                                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1714, in _get_metadata_or_catch_error
+(APIServer pid=7708)     metadata = get_hf_file_metadata(
+(APIServer pid=7708)                ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+(APIServer pid=7708)     return fn(*args, **kwargs)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/file_download.py", line 1621, in get_hf_file_metadata
+(APIServer pid=7708)     response = _httpx_follow_relative_redirects_with_backoff(
+(APIServer pid=7708)                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_http.py", line 729, in _httpx_follow_relative_redirects_with_backoff
+(APIServer pid=7708)     hf_raise_for_status(response)
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/huggingface_hub/utils/_http.py", line 814, in hf_raise_for_status
+(APIServer pid=7708)     raise _format(RevisionNotFoundError, message, response, repo_type=repo_type, repo_id=repo_id) from e
+(APIServer pid=7708) huggingface_hub.errors.RevisionNotFoundError: 404 Client Error. (Request ID: Root=1-6abfebe2-73364e967064f6792488d113;bf775d42-9a73-4dbd-8e6d-74ea29e3b049)
+(APIServer pid=7708) 
+(APIServer pid=7708) Revision Not Found for url: https://huggingface.co/Qwen/Qwen3-8B-AWQ/resolve/4da05a8eb55c6046cce958586c33b61da07bb79/config.json.
+(APIServer pid=7708) Invalid rev id: 4da05a8eb55c6046cce958586c33b61da07bb79
+(APIServer pid=7708) 
+(APIServer pid=7708) The above exception was the direct cause of the following exception:
+(APIServer pid=7708) 
+(APIServer pid=7708) Traceback (most recent call last):
+(APIServer pid=7708)   File "/usr/local/bin/vllm", line 10, in <module>
+(APIServer pid=7708)     sys.exit(main())
+(APIServer pid=7708)              ^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/cli/main.py", line 97, in main
+(APIServer pid=7708)     args.dispatch_function(args)
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/cli/serve.py", line 152, in cmd
+(APIServer pid=7708)     uvloop.run(run_server(args))
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/uvloop/__init__.py", line 96, in run
+(APIServer pid=7708)     return __asyncio.run(
+(APIServer pid=7708)            ^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+(APIServer pid=7708)     return runner.run(main)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+(APIServer pid=7708)     return self._loop.run_until_complete(task)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/uvloop/__init__.py", line 48, in wrapper
+(APIServer pid=7708)     return await main
+(APIServer pid=7708)            ^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/api_server.py", line 739, in run_server
+(APIServer pid=7708)     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/api_server.py", line 753, in run_server_worker
+(APIServer pid=7708)     async with build_async_engine_client(
+(APIServer pid=7708)   File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=7708)     return await anext(self.gen)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/api_server.py", line 127, in build_async_engine_client
+(APIServer pid=7708)     async with build_async_engine_client_from_engine_args(
+(APIServer pid=7708)   File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=7708)     return await anext(self.gen)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/entrypoints/openai/api_server.py", line 151, in build_async_engine_client_from_engine_args
+(APIServer pid=7708)     vllm_config = engine_args.create_engine_config(usage_context=usage_context)
+(APIServer pid=7708)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/engine/arg_utils.py", line 1959, in create_engine_config
+(APIServer pid=7708)     maybe_override_with_speculators(
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/vllm/transformers_utils/config.py", line 658, in maybe_override_with_speculators
+(APIServer pid=7708)     config_dict, _ = PretrainedConfig.get_config_dict(
+(APIServer pid=7708)                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/transformers/configuration_utils.py", line 745, in get_config_dict
+(APIServer pid=7708)     config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+(APIServer pid=7708)                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/transformers/configuration_utils.py", line 800, in _get_config_dict
+(APIServer pid=7708)     resolved_config_file = cached_file(
+(APIServer pid=7708)                            ^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/transformers/utils/hub.py", line 294, in cached_file
+(APIServer pid=7708)     file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+(APIServer pid=7708)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=7708)   File "/usr/local/lib/python3.12/dist-packages/transformers/utils/hub.py", line 477, in cached_files
+(APIServer pid=7708)     raise OSError(
+(APIServer pid=7708) OSError: 4da05a8eb55c6046cce958586c33b61da07bb79 is not a valid git identifier (branch name, tag name or commit id) that exists for this model name. Check the model page at 'https://huggingface.co/Qwen/Qwen3-8B-AWQ' for available revisions.

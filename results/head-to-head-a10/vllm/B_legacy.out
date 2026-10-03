@@ -1,0 +1,11 @@
+warmup: 2 request(s), excluded from all statistics
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      71.03   71.03    70.15    70.25     101.29   109.92     34.96   99.0    0
+    3   0      60.75    60.5   177.44   179.78     132.05   178.67     46.21   99.1    0
+    5   0      50.78   50.54   246.55   252.05     133.76   228.54     57.31   99.2    0
+    8   0       48.0   47.78   371.65   380.61     153.73   320.34     70.79   99.2    0
+
+wrote /root/h2h/out/vllm/B_legacy.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): MET (worst repeat 50.78 tok/s/user, ctx~7000 requested (word-sized), cache=warm)

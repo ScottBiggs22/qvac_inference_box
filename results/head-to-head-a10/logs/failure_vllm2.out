@@ -1,0 +1,27 @@
+[20:56:12.477] === vllm / vllm-fail2 failure probes (steps: storm freeze  freeze=core)
+[20:56:12.550] disconnect storm: 16 streams cut at 1 s
+[20:56:18.584]   after storm: health 200 0.002000s
+[20:56:18.720]   normal request: 200 0.123838s
+[20:56:18.740]   running/waiting: vllm:num_requests_running{engine="0",model_name="qwen3-8b"}=0.0 vllm:num_requests_waiting{engine="0",model_name="qwen3-8b"}=0.0 vllm:num_requests_waiting_by_reason{engine="0",model_name="qwen3-8b",reason="capacity"}=0.0 vllm:num_requests_waiting_by_reason{engine="0",model_name="qwen3-8b",reason="deferred"}=0.0 
+[20:56:18.751] freeze target: EngineCore pid 27792 (API server 27224 stays running)
+[20:56:21.757] freeze: SIGSTOP
+[20:56:21.784]   t+0s engine /health 200 0.000583s | /v1/models 200 0.000719s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:56:28.825]   t+10s engine /health 200 0.001447s | /v1/models 200 0.001825s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:56:35.868]   t+20s engine /health 200 0.001444s | /v1/models 200 0.001853s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:56:42.909]   t+30s engine /health 200 0.001445s | /v1/models 200 0.001894s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:56:49.954]   t+40s engine /health 200 0.001444s | /v1/models 200 0.001857s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:56:56.995]   t+50s engine /health 200 0.001482s | /v1/models 200 0.001815s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:04.037]   t+60s engine /health 200 0.001470s | /v1/models 200 0.001855s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:11.087]   t+70s engine /health 200 0.001475s | /v1/models 200 0.001822s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:18.131]   t+80s engine /health 200 0.001569s | /v1/models 200 0.001960s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:25.176]   t+90s engine /health 200 0.001565s | /v1/models 200 0.001962s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:32.215]   t+100s engine /health 200 0.001506s | /v1/models 200 0.001904s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:39.259]   t+110s engine /health 200 0.001505s | /v1/models 200 0.001948s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:46.299]   t+120s engine /health 200 0.001530s | /v1/models 200 0.001921s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:57:53.341]   t+130s engine /health 200 0.001567s | /v1/models 200 0.001937s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:58:00.382]   t+140s engine /health 200 0.001594s | /v1/models 200 0.001992s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:58:07.427]   t+150s engine /health 200 0.001501s | /v1/models 200 0.001923s | gw /readyz {"status":"ok","upstreams":{"http://127.0.0.1:8000/v1":true},"breakers":{"http://127.0.0.1:8000/v1":"closed"}} HTTP 200
+[20:58:14.435] freeze: SIGCONT sent
+[20:58:19.466]   after CONT: health 200 0.001572s | gw readyz 200 0.006719s
+[20:58:19.473]   frozen client stream: 515 frames, last: 24,"completion_tokens":512,"prompt_tokens_details":{"cached_tokens":3008,"created_cache_tokens":0}},"system_fingerprint":"vllm-0.28.0-c7fb79c5"}  data: [DONE]  
+[20:58:19.476] === done
