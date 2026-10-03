@@ -18,7 +18,7 @@ up() {  # up NAME [flags...]   (GGUF / NP from the environment)
 }
 bench() { local out=$1; shift; bash $REPO/scripts/h2h_bench.sh "$out" "$@" > /dev/null 2>&1; echo "  bench $out $*: done"; }
 
-steps=${*:-boots main kvvariants sat q8 reasoning quality gateway failure obs}
+steps=${*:-boots main cram0full kvvariants sat q8 reasoning quality gateway failure obs}
 for s in $steps; do
 case $s in
   boots)
@@ -38,10 +38,21 @@ for l in sys.stdin:
     GGUF=$Q4 up q4km-main || continue
     bench $O/qvac-q4km smoke A_warm A_cold F_partial F_cross B_legacy C_short D_long E_sat
     ;;
+  cram0full)
+    # The fork's host-RAM prompt cache (-cram, default 8 GiB, with
+    # --cache-idle-slots) serially copies ~1 GiB of slot KV per arriving
+    # request and degrades once full. Full sweep with it off: QVAC's best case.
+    step cram0full
+    GGUF=$Q4 up q4km-cram0full -cram 0 || continue
+    for suite in A_warm A_cold; do
+      bash $REPO/scripts/h2h_bench.sh $O/qvac-q4km-cram0 "${suite}_r2" > /dev/null 2>&1
+      echo "  bench $O/qvac-q4km-cram0 ${suite}_r2: done"
+    done
+    ;;
   kvvariants)
     # Prefix-cache plumbing: host-RAM prompt cache off, and unified KV on.
     step kvvariants
-    GGUF=$Q4 up q4km-cram0 -cram 0 && bench $O/qvac-q4km-cram0 F_cross A_warm_short
+    GGUF=$Q4 up q4km-cram0 -cram 0 && bench $O/qvac-q4km-cram0 F_cross F_partial
     GGUF=$Q4 up q4km-kvu -kvu && bench $O/qvac-q4km-kvu F_cross A_warm_short A_cold_short
     # Quantized KV at the same 8 slots: speed effect.
     GGUF=$Q4 up q4km-kvq8 -ctk q8_0 -ctv q8_0 && bench $O/qvac-q4km-kvq8 A_warm_short A_cold_short

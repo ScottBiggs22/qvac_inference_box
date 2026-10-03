@@ -86,6 +86,10 @@ for suite in "$@"; do
                  "${warm_each[@]}" ;;
     A_cold_short) run A_cold_short "${main_shape[@]}" --cache-mode cold \
                  --levels 1,5,8 --requests 6 --warmup 2 ;;
+    A_warm_r2) run A_warm_r2 "${main_shape[@]}" --levels 1,2,3,4,5,8 --requests 6 \
+                 --repeats 2 "${warm_each[@]}" ;;
+    A_cold_r2) run A_cold_r2 "${main_shape[@]}" --cache-mode cold \
+                 --levels 1,2,3,4,5,8 --requests 6 --repeats 2 --warmup 2 ;;
     R5)        run R5 "${main_shape[@]}" --levels 5 --requests 4 "${warm_each[@]}" ;;
     *) echo "unknown suite $suite" >&2 ;;
   esac

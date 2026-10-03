@@ -25,9 +25,14 @@ H2H=${H2H:-/root/h2h}
 RUN=$H2H/run
 LOGS=$H2H/logs
 mkdir -p "$RUN" "$LOGS"
+# Per-run overrides set by the caller (GGUF=... bash h2h_serve.sh ...) must
+# win over env.sh's defaults. Sourcing env.sh unguarded silently reset GGUF to
+# Q4_K_M, so the first head-to-head's "Q8_0" runs all served Q4_K_M.
+_gguf=${GGUF:-}; _port=${PORT:-}; _qvac_bin=${QVAC_BIN:-}
 # shellcheck disable=SC1091
 [ -f "$H2H/env.sh" ] && . "$H2H/env.sh"
-PORT=${PORT:-8000}
+GGUF=${_gguf:-${GGUF:-}}; QVAC_BIN=${_qvac_bin:-${QVAC_BIN:-}}
+PORT=${_port:-${PORT:-8000}}
 
 now() { date +%s.%N; }
 
@@ -89,7 +94,7 @@ case "$engine" in
          --api-key "$API_KEY" --alias qwen3-8b --metrics
          --reasoning-format none
          --host 127.0.0.1 --port "$PORT" "$@")
-    ready_re='server is listening|main: model loaded'
+    ready_re='model loaded|listening on'
     ;;
   *) echo "unknown engine $engine" >&2; exit 2 ;;
 esac

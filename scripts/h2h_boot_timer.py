@@ -193,7 +193,12 @@ def main() -> int:
     t_log = t_health = None
     deadline = time.time() + args.timeout
     pos = 0
+    # Stop on /health; give the log line at most 5 s more. A ready pattern
+    # that never matches (log format drift between builds) must not turn a
+    # 2-second boot into a 20-minute timeout.
     while time.time() < deadline and (t_log is None or t_health is None):
+        if t_health is not None and time.time() - t_health > 5.0:
+            break
         if t_log is None and log.exists():
             with log.open("r", errors="replace") as fh:
                 fh.seek(pos)
