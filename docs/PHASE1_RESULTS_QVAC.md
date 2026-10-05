@@ -1,5 +1,17 @@
 # QVAC Fabric — Phase 1 first pass (RTX 3090 PLACEHOLDER, not an A10)
 
+> **Corrections, 2026-10-03** (from the A10 head-to-head, `docs/HEAD_TO_HEAD.md` §13):
+> - The "7000+512" runs here actually sent **~5,300 prompt tokens**, because loadgen sized prompts by
+>   words × 0.75. Re-run at an exact 7000 tokens on an A10: QVAC Q4_K_M gives 69.5 / 25.9 / 20.1
+>   tok/s/user warm and 69.5 / 15.9 / 11.3 cold at 1 / 5 / 8 users.
+> - The "server counts were not used; delta-frame estimates apply" statement below is wrong.
+>   Every request in the raw jsonl has `usage_reported: true`.
+> - The odd warm TTFT (129 ms at 8 vs 684 ms at 5) is most likely the fork's default host-RAM
+>   prompt cache (`-cram`), which on the A10 serially copies ~1 GiB per arriving request
+>   (not re-checked against this pass's logs). Use `-cram 0`.
+> - The 3090 figures here flatter QVAC by roughly 1.5×. A10 at 8 users warm: 20.1, not 32.8.
+
+
 **Date:** 2026-10-01. **Raw data:** `results/qvac-rtx3090-placeholder/`.
 **Spend:** ~$0.30 (two instances, ~1.2 h total). **Scope:** does QVAC Fabric
 build, serve, and hold up on a 24 GiB card, and is there any hope against the

@@ -177,31 +177,34 @@ DevOps's own answers recorded in PRD §4.1 and §4.4, not from guesswork.
 
 ### Running QVAC Fabric
 
-**Everything in this section is an unverified placeholder** —
-`docs/QVAC_FORK.md`'s checklist tracks each item, and none should be treated
-as measured or final until that checklist is closed:
+Measured on a rented A10 on 2026-10-02/03, the same box as vLLM. The full comparison is
+`docs/HEAD_TO_HEAD.md`, and the remaining open items are in `docs/QVAC_FORK.md`'s checklist.
 
-- Image/tag: not yet chosen or pinned. vLLM's equivalent was
-  `vllm/vllm-openai:v0.28.0`, model pinned by commit hash — the same
-  discipline (pin the image, pin the model revision) should carry over once a
-  real image exists.
-- Launch flags: `deploy/k8s/probes.yaml`'s `args:` — model and quant are now
-  a real, reasoned choice (`--model=Qwen/Qwen3-8B-GGUF`, Q4_K_M — see
-  `docs/QVAC_FORK.md` checklist item 5a for why), not a guess; the exact
-  file/revision to pin and the `parallel` slot count are still open
-  (item 5b). **8192, not QVAC's raw 1024 default** — the PRD's context
-  requirement, and `gateway/routes/chat.py`'s `MAX_COMPLETION_TOKENS`
-  injection (2048) would break against the raw default.
-- Whether QVAC Fabric needs an analogous `--no-enable-log-requests`-style
-  flag to avoid keeping its own copy of every prompt is unaudited (checklist
-  item 8) — `gateway/audit.py`'s metadata-only design depends on the upstream
-  not silently retaining prompt text.
-- Probes: apply `deploy/k8s/probes.yaml` — it targets `/v1/models` (QVAC
-  Fabric documents no `/health` endpoint at all), not the gateway's own
-  probes. Every timing number is an unmeasured placeholder, unlike the vLLM
-  manifest's which had a real 153s cold / 45s warm measurement behind them.
-  Whether a kubelet `httpGet` probe needs QVAC's bearer-auth header is also
-  unresolved (checklist item 7). Mechanism/reasoning in `docs/PROBE_CONTRACT.md`.
+- **Headline:** at 8 concurrent users, exact 7000+512, cached prompt, QVAC Q4_K_M
+  holds **20.0 tok/s/user against vLLM's 43.2** on the same card, at about 2× the cost
+  per token. With an uncached prompt it **fails R1** (about 16 tok/s/user at 5 users).
+  It starts in 1.5–3 s (vLLM takes 41–90 s).
+- Image/tag: still not pinned, because no prebuilt CUDA image exists. The measured
+  binary was built from `tetherto/qvac-fabric-llm.cpp` @ `7bb2161c690b…` with
+  `cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86` (CUDA 13.0). That
+  build is not hermetic and has no SSL support.
+- Model: `Qwen/Qwen3-8B-GGUF` @ `7c41481f…`, `Qwen3-8B-Q4_K_M.gguf`
+  (sha256 `d98cdcbd…5785`). Q8_0 measured as a control: slightly faster at 8
+  users (22.9), slower at 1 user (48.6), and no answer-quality gain.
+- Launch flags (`deploy/k8s/probes.yaml`): `-m <gguf> -c 65536 -np 8 -ngl 99 -fa on
+  -cram 0 --metrics --reasoning-format none --alias qwen3-8b --api-key …`. `-c` is the
+  **total** context across slots (8192 per slot). **`-cram 0` is required**: the default
+  host-RAM prompt cache adds 2.5–4.4 s of TTFT under concurrency. **Never use
+  `-kvu`.** There is no `--openai` flag.
+- Logging: no prompt text in the default or `-v` logs (checked with a canary).
+  Never set `--log-prompts-dir`.
+- Probes: `deploy/k8s/probes.yaml` probes `/health`, which exists and needs no auth.
+  Timings are sized to the measured boot (startup 2 s × 15). QVAC exits 0.6 s after
+  SIGTERM and **cuts in-flight streams**, so the manifest drains with a `preStop`
+  sleep. Mechanism and reasoning are in `docs/PROBE_CONTRACT.md`.
+- Not supported on this build: `response_format: json_schema` (HTTP 400),
+  cross-slot prefix-cache sharing, native TLS (needs an SSL build) and mTLS
+  (no option exists). Tool calls work.
 - HA target: ≥2 production replicas, in different fault domains, listed
   together in the gateway's `UPSTREAM_URLS` — unchanged from the vLLM plan,
   but QVAC's real per-replica concurrent-user capacity (checklist item 3) is

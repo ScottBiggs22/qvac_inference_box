@@ -1,14 +1,12 @@
 # Probe configuration for a QVAC Fabric pod, as infrastructure-as-code.
 #
 # Forked from bkn301-inference's vLLM manifest (docs/QVAC_FORK.md has the full
-# disposition). The reasoning is in docs/PROBE_CONTRACT.md; EVERY NUMBER BELOW
-# IS AN UNVERIFIED PLACEHOLDER, more so than the vLLM manifest's ever were --
-# that one at least started from vLLM's own documented startup behavior before
-# PRD §7 Phase 1 replaced its placeholders with a real 153s/45s measurement on
-# a rented A10. This manifest has no equivalent measurement yet for QVAC Fabric
-# on this hardware. Do not treat anything here as tuned; treat it as a starting
-# point for the same measure-then-tighten process, tracked as an explicit
-# checklist in docs/QVAC_FORK.md.
+# disposition; the reasoning is in docs/PROBE_CONTRACT.md). As of the
+# 2026-10-02 head-to-head (docs/HEAD_TO_HEAD.md), the flags and probe numbers
+# below are MEASURED on a rented A10 with the pinned build -- not placeholders.
+# What is still unpinned is the image itself (no prebuilt CUDA image exists;
+# see `image:`). Re-confirm on the OCI VM.GPU.A10.1 before production, the same
+# caveat the vLLM manifest carried.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,105 +15,103 @@ spec:
   replicas: 1
   template:
     spec:
+      # QVAC exits 0.63 s after SIGTERM and CUTS in-flight streams (no
+      # [DONE]; HEAD_TO_HEAD.md §9) -- unlike vLLM, which drained for 117 s.
+      # So the drain has to happen BEFORE the signal: the preStop sleep below
+      # holds the pod in Terminating (out of the Service endpoints, so the
+      # gateway stops routing to it) long enough for a 512-token answer at the
+      # measured 8-user rate (512 / 20 tok/s = ~26 s) to finish.
+      terminationGracePeriodSeconds: 45
       containers:
         - name: qvac-fabric
-          # PLACEHOLDER. No QVAC Fabric image/tag has been chosen or pinned
-          # yet -- unlike vLLM's, which was pinned by tag AND measured against
-          # a specific driver/CUDA combination. QVAC Fabric's backend choice
-          # (Vulkan vs. CUDA build, on this same A10 hardware) is itself an
-          # open question -- see docs/QVAC_FORK.md checklist.
+          # STILL A PLACEHOLDER. There is no prebuilt CUDA llama-server for the
+          # Tether fork; the measured binary was built from
+          # tetherto/qvac-fabric-llm.cpp @ 7bb2161c690befa1bb44ff9b20e4eea2da6c22b8
+          # with `cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86`
+          # (CUDA 13.0 nvcc, 3 min on 23 cores). That build is NOT hermetic
+          # (it fetches a web-UI bundle) and has NO SSL support -- build with
+          # OpenSSL enabled if native TLS is wanted (untested).
           image: REPLACE_ME/qvac-fabric:UNPINNED
+          command: ["/app/llama-server"]
           args:
-            # --openai mounts the OpenAI-compatible surface this gateway
-            # actually calls (/v1/chat/completions, /v1/models, ...);
-            # everything below it is equally unverified against the real
-            # server's actual config schema -- see docs/QVAC_FORK.md.
-            - --openai
-            # Qwen/Qwen3-8B-GGUF, Q4_K_M quant (5.03 GiB) -- same model as
-            # bkn301-inference's Qwen/Qwen3-8B-AWQ, re-quantized for QVAC's
-            # llama.cpp-descended engine. PRD §3.5 already evaluated this
-            # exact HF repo and rejected it FOR VLLM SPECIFICALLY
-            # ("experimental" GGUF support there); doesn't apply here, where
-            # GGUF is the native format. Q4_K_M mirrors AWQ's INT4 choice
-            # (bandwidth-bound decode on an A10 favors smaller weights).
-            # Still unpinned: the exact file/revision (docs/QVAC_FORK.md
-            # checklist item 5).
-            - --model=Qwen/Qwen3-8B-GGUF
-            # 8192 to match the PRD's context requirement -- QVAC's own
-            # documented default is 1024, which the PRD does not meet. vLLM's
-            # equivalent was --max-model-len=8192.
-            - --ctx-size=8192
-            # UNMEASURED. vLLM ran with NO tensor/data parallelism on this
-            # hardware (a single A10 has no NVLink) and instead relied on
-            # continuous batching to serve concurrent users off one GPU.
-            # QVAC's `config.parallel: N` is a fundamentally different,
-            # FCFS-slot concurrency model (docs/QVAC_FORK.md) -- this number
-            # is a placeholder, not a considered choice, pending checklist
-            # item 3 (real concurrent-slot memory cost on this hardware).
-            - --parallel=1
+            # Qwen/Qwen3-8B-GGUF @ 7c41481f57cb95916b40956ab2f0b139b296d974,
+            # Q4_K_M, sha256 d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785.
+            - -m
+            - /models/Qwen3-8B-Q4_K_M.gguf
+            # -c is the TOTAL context across slots: 65536 / 8 = 8192 per slot,
+            # the PRD's per-request context. 8 slots = 8 concurrent requests;
+            # a 9th queues FCFS (measured: no rejection, TTFT grows).
+            - -c
+            - "65536"
+            - -np
+            - "8"
+            - -ngl
+            - "99"
+            - -fa
+            - "on"
+            # REQUIRED. The fork's default host-RAM prompt cache (8 GiB, with
+            # --cache-idle-slots) serially copies ~1 GiB of slot KV per arriving
+            # request: +2.5 s TTFT at 5 users, +4.4 s at 8, and it degrades
+            # once full. -cram 0 removes it with no throughput cost.
+            - -cram
+            - "0"
+            # Do NOT add -kvu: measured 16.7 s / 29 s warm TTFT at 5 / 8 users
+            # and half the aggregate throughput.
+            - --metrics
+            # Qwen3 thinks by default; without this the think text lands in
+            # reasoning_content and `content` is empty. Matches vLLM run
+            # without a reasoning parser.
+            - --reasoning-format
+            - none
+            - --alias
+            - qwen3-8b
+            - --api-key
+            - $(QVAC_API_KEY)
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+            # Never set --log-prompts-dir: it writes prompt text to disk. The
+            # default and -v logs were checked with a canary and carry none.
+          env:
+            - name: QVAC_API_KEY
+              valueFrom: { secretKeyRef: { name: qvac-api-key, key: key } }
           resources:
             limits:
-              # Same hardware class as bkn301-inference (a cluster of cloud
-              # A10s) -- only the inference engine changes, not the GPU
-              # vendor or the k8s device-plugin resource key.
-              #
-              # WHETHER "ONE WHOLE GPU, NEVER A FRACTION" STILL APPLIES IS
-              # UNVERIFIED. vLLM's version of this rule came from a specific
-              # mechanism (KV cache pre-allocated at startup, so a second pod
-              # on the same card fails at boot rather than degrading). QVAC's
-              # llama.cpp-descended memory model may or may not pre-allocate
-              # the same way -- carried forward here as the conservative
-              # default, not as a confirmed QVAC property.
+              # 14,051 MiB measured at 8 slots x 8192 f16 KV. One whole A10 per
+              # pod: 12 slots fit (18,659 MiB), 16 do not with f16 KV.
               nvidia.com/gpu: 1
+          lifecycle:
+            preStop:
+              exec: { command: ["sleep", "30"] }
 
-          # UNMEASURED. vLLM's 153s cold / 45s warm numbers came from PRD §7
-          # Phase 1 actually booting it on a rented A10 -- there is no QVAC
-          # Fabric equivalent yet. The multiplier philosophy carries over
-          # (roughly 2x whatever the real cold start turns out to be, since a
-          # loose startup probe costs a slower failure verdict while a tight
-          # one costs a boot loop that never converges), but the base number
-          # itself is a guess: nothing here may be tightened until a Phase
-          # 1-equivalent QVAC measurement replaces it, the same way vLLM's own
-          # placeholder was replaced (docs/QVAC_FORK.md checklist item 1).
+          # Measured: 1.52-1.61 s to /health warm, 2.96-2.98 s with the weights
+          # evicted from page cache; first token +0.14 s. 2 s x 15 = 30 s is
+          # ~10x the cold figure -- loose on purpose (a tight startup probe
+          # costs a boot loop), but an order of magnitude below vLLM's 300 s.
           startupProbe:
-            httpGet: { path: /v1/models, port: 8000 }
-            periodSeconds: 5
-            failureThreshold: 60
+            httpGet: { path: /health, port: 8000 }
+            periodSeconds: 2
+            failureThreshold: 15
 
-          # "Is this instance BROKEN" -- deliberately NOT "is it busy".
-          # Reasoning carries over unchanged from the vLLM manifest: putting
-          # queue depth here pulls every replica out of rotation during a
-          # traffic spike, at the exact moment that is most damaging.
-          # Load-aware routing belongs in the gateway, which tracks in-flight
-          # requests itself. This matters MORE under QVAC's FCFS
-          # `config.parallel: N` queueing than it did under vLLM's continuous
-          # batching, since "busy" is a more common state with fewer slots.
-          #
-          # /v1/models, not /health: QVAC Fabric documents no /health endpoint
-          # at all (docs/QVAC_FORK.md) -- this is the same OpenAI-shaped path
-          # gateway/upstream/client.py's UpstreamPool.health()/.probe() and
-          # gateway/upstream/wedge.py's dispatch monitor both already treat as
-          # the reachability signal, kept consistent here.
-          #
-          # UNVERIFIED WHETHER THIS NEEDS AN AUTH HEADER. QVAC requires bearer
-          # auth on non-loopback binds by default, and a kubelet httpGet probe
-          # very likely counts as non-loopback even within the same pod.
-          # httpGet.httpHeaders only accepts a literal string, not a
-          # secretKeyRef, so a static probe-scoped token in this manifest is
-          # one option; an exec probe reading a mounted Secret is the other.
-          # Neither is chosen yet -- see docs/QVAC_FORK.md checklist item 7.
+          # "Is this instance BROKEN", not "is it busy" (docs/PROBE_CONTRACT.md).
+          # /health exists and needs NO auth (measured), so no probe token is
+          # needed -- /v1/models and /metrics DO require the API key (401).
+          # Under a full 8-user load /health kept answering; it only stops
+          # answering when the server's main loop is stuck (SIGSTOP test), which
+          # is exactly the "broken" signal wanted.
           readinessProbe:
-            httpGet: { path: /v1/models, port: 8000 }
+            httpGet: { path: /health, port: 8000 }
             periodSeconds: 10
+            timeoutSeconds: 3
             failureThreshold: 2
 
-          # Last resort, same reasoning as vLLM's: a restart is expensive
-          # (model reload), so this must never be a test generation, and the
-          # timeout must tolerate a legitimate decode running long under load.
-          # 20s x 3 = ~60s to restart -- carried over as a placeholder, not a
-          # QVAC measurement.
+          # QVAC is a single process: a stuck decode loop hangs /health too
+          # (unlike vLLM, whose EngineCore could stall while /health stayed
+          # 200). A restart costs ~1.7 s, so liveness can act on the same signal
+          # without the vLLM manifest's fear of an expensive reload.
           livenessProbe:
-            httpGet: { path: /v1/models, port: 8000 }
-            periodSeconds: 20
+            httpGet: { path: /health, port: 8000 }
+            periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3

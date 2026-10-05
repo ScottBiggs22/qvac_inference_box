@@ -78,21 +78,37 @@ window is a documented **1024 tokens** (the PRD requires 8k). It documents
 > exist (`--ssl-*-file`), continuous batching is on by default, and `-c` is the
 > total across `--parallel` slots. Item **5b is resolved** (1152 MiB per 8k
 > slot, weights shared). Items 1, 2, 4, 7, 8 have partial 3090 findings there.
-> `deploy/k8s/probes.yaml` and `README.md` still carry the old flags and are
-> **not yet corrected**.
+> ~~`deploy/k8s/probes.yaml` and `README.md` still carry the old flags and are
+> not yet corrected.~~ Corrected 2026-10-03 (below).
+
+> **UPDATE 2026-10-03:** the head-to-head ran on a real A10, the same box as vLLM
+> (`docs/HEAD_TO_HEAD.md`). Items 1, 2, 4, 5b, 7 and 8 are now measured, and
+> item 6 has new facts. `deploy/k8s/probes.yaml` and `README.md` now carry the
+> real flags and measured values. Headline: at 8 users, warm, exact 7000+512,
+> QVAC Q4_K_M holds **20.0 tok/s/user against vLLM's 43.2**, and it **fails R1
+> with a cold prefix** (about 16 at 5 users, vs vLLM's 27.8). Run it with
+> `-cram 0`, never `-kvu`.
 
 ## Verification checklist — must be measured on real rented A10 hardware
 
-None of these are resolved by this pass. Each should be checked off here, with
+Status as of 2026-10-03: items 1, 2, 4, 5b, 7 and 8 are measured on an A10
+(`docs/HEAD_TO_HEAD.md`). Each item should be checked off here, with
 a link to the phase-doc section that measured it, once real hardware time
 happens — mirroring `bkn301-inference`'s own Phase 1/2 methodology (rent,
 measure, capture raw output into `results/`, write it up, only then treat a
 number as real).
 
-- [ ] **1. Cold-start / warm-restart time** for the actual chosen launch config
+- [x] **1. Cold-start / warm-restart time** for the actual chosen launch config
       (model, quant, `ctx_size`, `parallel`). Sets
       `deploy/k8s/probes.yaml`'s `startupProbe.failureThreshold`.
-- [ ] **2. Whether `GET /v1/models` stays green through an engine freeze.**
+      **Measured:** Q4_K_M np8 boots in 1.52–1.61 s warm and 2.96–2.98 s with the
+      weights evicted; Q8_0 takes 3.1 s and 10–12 s. Restart after SIGTERM 1.66 s.
+      probes.yaml now uses 2 s × 15 (HEAD_TO_HEAD.md §8).
+- [x] **2. Whether `GET /v1/models` stays green through an engine freeze.**
+      **Measured: no.** QVAC is one process, so `kill -STOP` hangs `/health` and
+      `/v1/models`, and the gateway's `/readyz` goes 503 within one probe. The
+      gateway's `wedge.py` gauge stayed at 0 for 150 s against both engines; it
+      misses mid-stream stalls (HEAD_TO_HEAD.md §9). Original question:
       Repeat `docs/PHASE2_L4_RESULTS.md`'s real `kill -STOP` experiment against
       QVAC Fabric. Determines whether `gateway/upstream/wedge.py`'s signal is
       load-bearing in practice (expected: yes, same "API server ≠ engine loop"
@@ -101,7 +117,10 @@ number as real).
 - [ ] **3. Actual concurrent-slot memory cost.** Superseded by, and now
       tracked as, **item 5b** below — same question, moved next to the
       capacity math it determines.
-- [ ] **4. Real SSE opening-frame shape/timing.** Confirms
+- [x] **4. Real SSE opening-frame shape/timing.** **Measured:** the opening
+      frame is `delta.content: null` (vLLM sends `""`), the usage frame has
+      `choices: []` plus `timings`, then `[DONE]`. loadgen and the gateway handle
+      both shapes. Original question: Confirms
       `gateway/routes/chat.py`'s TTFT measurement and `scripts/loadgen.py`'s
       timing assumptions, both currently carried over from vLLM's shape
       unverified.
@@ -130,7 +149,7 @@ number as real).
       commit-hash pin, not a moving tag), and llama.cpp's optional quantized
       KV-cache (`--cache-type-k`/`-v`) is unused in this estimate — a real
       lever if 116k tokens turns out optimistic.
-- [ ] **5b. Whether QVAC Fabric's HTTP server shares weights across
+- [x] **5b. Whether QVAC Fabric's HTTP server shares weights across
       `config.parallel: N` slots** the way a standard `llama-server` does
       (one loaded model, N independent KV-cache buffers) — the assumption
       5a's capacity math depends on entirely. Distinct from, and not the same
@@ -141,6 +160,12 @@ number as real).
       llama.cpp. Plausible, not confirmed. **The single highest-priority item
       in this checklist** — everything else about the expected KPI
       regression's *size* depends on this number specifically.
+      **Resolved:** weights are shared. On the A10: 14,051 MiB at np8 (f16 KV),
+      18,659 MiB at np12, np16 f16 fails to load, np16/20/24 with q8_0 KV fit in
+      15.1/17.7/20.2 GiB. But capacity is not the binding constraint;
+      **per-slot decode is**. At 8 slots per-user decode is already 20.0 tok/s, and
+      the 5a "2.9× headroom on paper" does not turn into throughput
+      (HEAD_TO_HEAD.md §8).
 - [x] **6. TLS/mTLS at the QVAC layer — DEFERRED for the initial vast.ai
       test, 2026-09-30.** Plain HTTP + bearer token on the rented box's
       private network, matching `bkn301-inference`'s own Phase 1 precedent
@@ -151,13 +176,23 @@ number as real).
       so a sidecar reverse proxy terminating TLS and forwarding plaintext to
       QVAC on localhost is the live option if mTLS is required — unbuilt,
       not attempted this pass.
-- [ ] **7. k8s probe auth-header mechanics.** QVAC requires bearer auth on
+      **Update 2026-10-03:** `--ssl-key-file/--ssl-cert-file` exist, but the
+      documented CUDA build has no SSL: the server exits with `the server is built
+      without SSL support`. There is no client-certificate option at all, so mTLS
+      still needs the sidecar.
+- [x] **7. k8s probe auth-header mechanics.** **Resolved:** `/health` needs no
+      auth (measured), and `/v1/models`, `/metrics` and `/slots` return 401 without
+      the key. probes.yaml now probes `/health`, so no probe token is needed.
+      Original question: QVAC requires bearer auth on
       non-loopback binds by default; a kubelet `httpGet` probe likely counts
       as non-loopback even within the same pod. `httpGet.httpHeaders` only
       accepts a literal string (no `secretKeyRef`) — decide between a static
       probe-scoped token in the manifest and an `exec` probe reading a mounted
       Secret.
-- [ ] **8. Request/output-logging parity.** vLLM was required to run with
+- [x] **8. Request/output-logging parity.** **Measured:** a canary prompt was
+      absent from the default log, the `-v` log and `--log-file`. But
+      `--log-prompts-dir` exists and writes prompts to disk, so forbid it
+      (probes.yaml says so). Original question: vLLM was required to run with
       `--no-enable-log-requests --no-enable-log-outputs` so it kept no second
       copy of every prompt (PRD §5.4) — `gateway/audit.py`'s whole
       metadata-only design depends on the upstream not silently retaining
