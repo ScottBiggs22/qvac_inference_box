@@ -1,0 +1,6 @@
+=== smoke  2026-10-03T05:52:50Z
+=== smoke done rc=0  2026-10-03T05:53:02Z
+=== A_warm_short  2026-10-03T05:53:02Z
+=== A_warm_short done rc=0  2026-10-03T06:00:05Z
+=== A_cold_short  2026-10-03T06:00:05Z
+=== A_cold_short done rc=0  2026-10-03T06:10:45Z

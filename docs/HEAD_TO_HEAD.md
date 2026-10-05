@@ -1,13 +1,14 @@
 # Head-to-head: vLLM vs QVAC Fabric on one A10
 
-> **Status (2026-10-03):** complete for vLLM (AWQ-INT4) and QVAC Fabric
-> (Q4_K_M, with six configuration variants). **Q8_0 is pending.** The first
-> Q8_0 pass actually served Q4_K_M because of a harness bug (§13). Its data are
-> quarantined in `results/head-to-head-a10/qvac-q8-INVALID-served-q4km/`, and a
-> rerun is waiting for an A10 to become rentable again.
+> **Status (2026-10-03): complete.** vLLM (AWQ-INT4) and QVAC Fabric (Q4_K_M
+> plus six configuration variants) on one A10. QVAC Q8_0 was measured on a second
+> A10, anchored by a Q4_K_M re-run on that same box (§6b). The first Q8_0 pass
+> actually served Q4_K_M because of a harness bug (§13). Its data are quarantined in
+> `results/head-to-head-a10/qvac-q8-INVALID-served-q4km/` and must not be quoted.
 >
-> Raw data: `results/head-to-head-a10/`. Regenerate tables with
-> `.venv/bin/python scripts/h2h_report.py results/head-to-head-a10`.
+> Raw data: `results/head-to-head-a10/` (main box) and
+> `results/head-to-head-a10-rerun/` (Q8_0 box). Regenerate tables with
+> `.venv/bin/python scripts/h2h_report.py <dir>`.
 > These are rented-box figures, so treat them as a provisional baseline.
 > Re-confirm on the OCI `VM.GPU.A10.1` before anyone uses them for production sizing.
 
@@ -18,28 +19,33 @@ Workload: Qwen3-8B, **exact 7000-token prompt + 512 output tokens**, 8192-token
 context per sequence. Quantization differs: vLLM runs **AWQ-INT4**, QVAC runs
 **Q4_K_M**. Per-user figures are per-user decode tok/s p50, mean across repeats.
 
-| Question | vLLM (AWQ-INT4) | QVAC best config (Q4_K_M, `-cram 0`) | QVAC default (Q4_K_M) |
-|---|---|---|---|
-| **R1 floor: ≥20 tok/s/user at 5 users, warm prefix** | **met, 45.9** | met, 26.5 ±4.8 | met, 25.9 ±3.5 |
-| **R1 floor at 5 users, cold prefix** (every request a full prefill) | **met, 27.8** | **NOT met, 15.7** | **NOT met, 15.9** |
-| 8 users, warm (the bar, restated: see §10) | **43.2** | 20.0 | 20.1 |
-| 8 users, cold | 19.6 | 12.3 | 11.3 |
-| Aggregate tok/s at 8 users, warm / cold | **340 / 133** | 159 / 88 | 137 / 80 |
-| TTFT p50 at 8 users, warm | 194 ms | 225 ms | **4,404 ms** |
-| Cost per 1M output tokens at 8 users, warm ($0.28/hr box) | **$0.23** | $0.49 | $0.57 |
+| Question | vLLM (AWQ-INT4) | QVAC best config (Q4_K_M, `-cram 0`) | QVAC default (Q4_K_M) | QVAC Q8_0 † |
+|---|---|---|---|---|
+| **R1 floor: ≥20 tok/s/user at 5 users, warm prefix** | **met, 45.9** | met, 26.5 ±4.8 | met, 25.9 ±3.5 | met, 28.9 (`-cram 0`) |
+| **R1 floor at 5 users, cold prefix** (every request a full prefill) | **met, 27.8** | **NOT met, 15.7** | **NOT met, 15.9** | **NOT met, 17.4** (default) |
+| 8 users, warm (the bar, restated: see §13) | **43.2** | 20.0 | 20.1 | 22.9 (`-cram 0`) |
+| 8 users, cold | 19.6 | 12.3 | 11.3 | 12.0 (default) |
+| Aggregate tok/s at 8 users, warm / cold | **340 / 133** | 159 / 88 | 137 / 80 | 182 / 84 |
+| TTFT p50 at 8 users, warm | 194 ms | 225 ms | **4,404 ms** | 291 ms (`-cram 0`) |
+| Cost per 1M output tokens at 8 users, warm ($0.28/hr box) | **$0.23** | $0.49 | $0.57 | $0.43 |
+
+† Q8_0 was measured on a second A10 (vast.ai machine 152062) in single runs. The same box's Q4_K_M anchor
+reproduced the main box within 2% (68.7 / 30.0 / 20.0 tok/s/user at 1/5/8 users, against 69.4 / 29.4 / 20.05), so
+the comparison holds (§6b).
 
 **Bottom line:**
 - At 1 user QVAC matches vLLM: 69.5 vs 68.7 tok/s, essentially identical.
 - From 2 users up QVAC scales far worse. At 8 users it delivers **46% of vLLM's per-user decode and 40–47% of its aggregate throughput**. Warm, it lands at almost exactly 20 tok/s/user at 8.
 - With a cold prefix **QVAC fails the R1 floor at 5 users** (about 16 tok/s/user) in every configuration tried. vLLM passes it (27.8).
 - With default flags, QVAC also adds **2.5–4.4 s of warm TTFT** at 5–8 users, caused by its host-RAM prompt cache (§7). Turning that cache off (`-cram 0`) fixes TTFT but not throughput.
+- **Quantization is not the cause.** Q8_0, which avoids the 4-bit kernels, is slower than Q4_K_M at 1 user (48.6 tok/s) and only slightly faster at 8 users (22.9, aggregate 182). That is still 53% of vLLM per user, and it also fails R1 cold (17.4).
 
 **What QVAC does better:**
 - **Start-up in about 1.5–3 s**, against vLLM's 41 s warm and 90 s cold.
 - **SIGTERM exit in 0.6 s**, against vLLM's 117 s with a request in flight.
 - **8-slot VRAM footprint of 14 GB**, against vLLM's 20.5–21.6 GB at 0.90 utilisation.
 - **More 8k slots on one card with q8_0 KV**: 24 slots loaded in 20.2 GB.
-- **Quality:** Q4_K_M answers as well as AWQ (32/40 vs 31/40). Tool calls work.
+- **Quality:** Q4_K_M answers as well as AWQ (32/40 vs 31/40), and Q8_0 scores 30/40. Tool calls work on both.
 
 **What QVAC can't do (on this build)** is listed in §12. The headline items: no structured
 output (`response_format: json_schema` returns 400), no cross-slot prefix
@@ -53,18 +59,19 @@ sharing, no native TLS in the documented build, and no mTLS at all.
 | Box check | `scripts/verify_box.sh` passed clean (`results/head-to-head-a10/verify_box.out`); full provenance in `box_provenance.txt` |
 | Scheduling | Both engines on the same box, **sequentially, never concurrently**. GPU confirmed idle (<500 MiB) before every launch. |
 | Session | 2026-10-02 17:18 → 2026-10-03 02:25 UTC, $2.53 |
+| Q8_0 box | vast.ai machine 152062 (California), NVIDIA A10 23,028 MiB, driver 580.178.04, CUDA 13.0, 15.4 effective cores; same image, same QVAC commit and build flags (12:28 build on 15 cores); 2026-10-03 05:26 → 06:45 UTC, $0.48. `results/head-to-head-a10-rerun/` |
 
 | | vLLM | QVAC Fabric |
 |---|---|---|
 | Build | `vllm/vllm-openai:v0.28.0` image | `tetherto/qvac-fabric-llm.cpp` @ `7bb2161c690befa1bb44ff9b20e4eea2da6c22b8` (build 9240), built on the box: CUDA 13.0 nvcc, sm_86, `-DGGML_CUDA=ON`, 3:00 wall on 23 cores (clone 148 s, configure 4 s) |
 | Hermetic build? | pinned image | **No.** The build downloads a web-UI bundle; that download failed and the build continued. Built without OpenSSL (§11). |
 | Model | `Qwen/Qwen3-8B-AWQ` @ `4da05a8edb55c6046cce958586c33b61da07bb79` | `Qwen/Qwen3-8B-GGUF` @ `7c41481f57cb95916b40956ab2f0b139b296d974`; Q4_K_M sha256 `d98cdcbd…5785` (matches pin), Q8_0 `408b9555…83d6` |
-| **Quantization** | **AWQ INT4** | **Q4_K_M** (all QVAC numbers below); Q8_0 pending |
+| **Quantization** | **AWQ INT4** | **Q4_K_M** (§6); **Q8_0** (§6b, second box) |
 | **Context window** | 8192 per sequence (`--max-model-len 8192`), KV shared dynamically across sequences | 8192 **per slot** (`-c 65536 -np 8`; `-c` is the total). Variants: np12 (`-c 98304`), np16/20/24 with q8_0 KV |
 | KV capacity | 92,544 tokens (fresh compile) / 99,856 (warm boot) | 8 × 8192 = 65,536 tokens (fixed slots) |
 | Flags | `--gpu-memory-utilization 0.90 --no-enable-log-requests --no-enable-log-outputs --served-model-name qwen3-8b --api-key … --enable-prompt-tokens-details` (+ `--enable-auto-tool-choice --tool-call-parser hermes` for the quality run only) | `-ngl 99 -fa on --metrics --reasoning-format none --alias qwen3-8b --api-key …` |
 
-**On quantization:** AWQ-INT4 and Q4_K_M are both ~4-bit, but they use different schemes and different kernels. Some of the throughput difference may come from the quantization rather than the engine. The Q8_0 rerun (pending) is the control for how much quantization matters.
+**On quantization:** AWQ-INT4 and Q4_K_M are both ~4-bit, but they use different schemes and different kernels. Q8_0 is the control. It closes very little of the gap (22.9 vs 20.0 tok/s/user at 8 users; vLLM 43.2), so the gap is the engine, not the quantization (§6b).
 
 ## 3. Methodology
 
@@ -445,6 +452,65 @@ _prefill/cache source: timings; prompt tokens actually sent: [7000]_
 Same throughput as `--reasoning-format none` (29.9 vs 29.4 in A_warm repeat 0). The reasoning mode has no
 effect on speed when output length is fixed.
 
+## 6b. QVAC Q8_0 (second A10, Q4_K_M-anchored)
+
+Same image, same QVAC commit, same flags, same loadgen invocations. Machine 152062 instead of 123534.
+Every launch was checked against the GGUF it was asked for (`results/head-to-head-a10-rerun/logs/cmds/`).
+These are single runs, so there is no variance estimate.
+
+**Anchor: Q4_K_M on this box, default config:**
+
+| conc | reps | tok/s/user p50 | p05 | aggr wall | aggr steady | TTFT p50 | p95 | p99 | ITL p50 | ITL p95 | prefill ms | cache hit | queue ms | fail |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 68.7 | 68.1 | 67.6 | 67.6 | 106 | 138 | 144 | 14.3 | 14.9 | 34 | 99.8% | - | 0 |
+| 5 | 1 | 30.0 | 29.9 | 127.4 | 130.5 | 3071 | 3108 | 3109 | 33.2 | 34.4 | 88 | 99.8% | - | 0 |
+| 8 | 1 | 20.0 | 20.0 | 133.1 | 136.5 | 5258 | 5344 | 5360 | 49.9 | 51.2 | 124 | 99.8% | - | 0 |
+
+_prefill/cache source: timings; prompt tokens actually sent: [7000]_
+
+| conc | reps | tok/s/user p50 | p05 | aggr wall | aggr steady | TTFT p50 | p95 | p99 | ITL p50 | ITL p95 | prefill ms | cache hit | queue ms | fail |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 69.0 | 68.9 | 47.4 | 49.9 | 3385 | 3421 | 3426 | 14.5 | 14.7 | 2547 | 0.1% | - | 0 |
+| 5 | 1 | 17.9 | 14.9 | 70.6 | 72.9 | 5458 | 12599 | 13638 | 43.0 | 45.4 | 3309 | 0.1% | - | 0 |
+| 8 | 1 | 11.0 | 10.6 | 78.0 | 81.7 | 6364 | 19211 | 23927 | 50.5 | 53.4 | 4005 | 0.1% | - | 0 |
+
+_prefill/cache source: timings; prompt tokens actually sent: [7000]_
+
+The anchor reproduces the main box: warm 68.7 / 30.0 / 20.0 vs 69.4 / 29.4 / 20.05 (repeat 0), cold 69.0 / 17.9 / 11.0
+vs 69.6 / 16.1 / 11.3.
+
+**Q8_0, default config:**
+
+| conc | reps | tok/s/user p50 | p05 | aggr wall | aggr steady | TTFT p50 | p95 | p99 | ITL p50 | ITL p95 | prefill ms | cache hit | queue ms | fail |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 48.6 | 48.5 | 48.2 | 48.2 | 99 | 102 | 102 | 20.5 | 21.0 | 38 | 99.8% | - | 0 |
+| 5 | 1 | 29.1 | 27.6 | 113.6 | 121.8 | 3883 | 9338 | 9339 | 34.3 | 35.8 | 100 | 99.8% | - | 0 |
+| 8 | 1 | 23.2 | 22.6 | 145.5 | 150.8 | 6161 | 6562 | 6579 | 42.8 | 45.2 | 149 | 99.8% | - | 0 |
+
+_prefill/cache source: timings; prompt tokens actually sent: [7000]_
+
+| conc | reps | tok/s/user p50 | p05 | aggr wall | aggr steady | TTFT p50 | p95 | p99 | ITL p50 | ITL p95 | prefill ms | cache hit | queue ms | fail |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 48.6 | 48.5 | 37.0 | 38.4 | 3329 | 3361 | 3368 | 20.6 | 20.9 | 2524 | 0.1% | - | 0 |
+| 5 | 1 | 17.4 | 13.1 | 66.6 | 68.6 | 5413 | 11622 | 13288 | 52.2 | 54.1 | 3345 | 0.1% | - | 0 |
+| 8 | 1 | 12.0 | 11.5 | 84.2 | 88.3 | 6283 | 18961 | 23585 | 43.6 | 46.3 | 3945 | 0.1% | - | 0 |
+
+_prefill/cache source: timings; prompt tokens actually sent: [7000]_
+
+**Q8_0, `-cram 0`:**
+
+| conc | reps | tok/s/user p50 | p05 | aggr wall | aggr steady | TTFT p50 | p95 | p99 | ITL p50 | ITL p95 | prefill ms | cache hit | queue ms | fail |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1 | 48.8 | 48.7 | 48.4 | 48.4 | 97 | 98 | 98 | 20.5 | 20.8 | 38 | 99.8% | - | 0 |
+| 5 | 1 | 28.9 | 28.7 | 143.7 | 143.8 | 152 | 254 | 277 | 34.3 | 35.8 | 69 | 99.8% | - | 0 |
+| 8 | 1 | 22.9 | 22.8 | 181.7 | 181.7 | 291 | 349 | 363 | 43.2 | 45.1 | 175 | 99.8% | - | 0 |
+
+_prefill/cache source: timings; prompt tokens actually sent: [7000]_
+
+Takeaway: Q8_0 decodes **slower at 1 user** (48.6 vs 68.7: twice the weight bytes on a bandwidth-bound card)
+and **slightly faster at 8 users** (22.9 vs 20.0 with `-cram 0`; aggregate 182 vs 159). It still sits at
+53% of vLLM per user at 8 users, and **fails R1 cold** (17.4 at 5 users). VRAM is 17,265 MiB at 8 slots.
+
 ## 7. Cache behaviour
 
 | | vLLM | QVAC |
@@ -460,15 +526,15 @@ prefill (2.5–3.9 s) the first time each slot sees a given prefix.
 
 ## 8. Start-up, capacity and VRAM
 
-| Scenario | vLLM (AWQ-INT4) | QVAC Q4_K_M (np8) |
-|---|---|---|
-| Fresh pod (incl. weight download) | 148.2 s (51.8 s download) | not measured end-to-end. GGUF download 46 s + boot ~3 s ≈ 49 s, plus the binary (no prebuilt CUDA build exists: 3 min build) |
-| Warm restart | 40.8–41.9 s (4 boots) | **1.52–1.61 s** (4 boots) |
-| Weights evicted from page cache (mincore-verified) | 41.8–42.8 s (3) | **2.96–2.98 s** (3) |
-| Evicted + compile caches cleared | 89.5–89.9 s (3) | n/a (no JIT) |
-| `/health` → first token | +0.13 s | +0.14 s |
-| Restart after SIGTERM | 41.2 s | **1.66 s** |
-| VRAM after load | 20,541–21,621 MiB (0.90 util) | 14,051 MiB |
+| Scenario | vLLM (AWQ-INT4) | QVAC Q4_K_M (np8) | QVAC Q8_0 (np8, second box) |
+|---|---|---|---|
+| Fresh pod (incl. weight download) | 148.2 s (51.8 s download) | not measured end-to-end. GGUF download 46 s + boot ~3 s ≈ 49 s, plus the binary (no prebuilt CUDA build exists: 3 min build) | download 77 s (main box) |
+| Warm restart | 40.8–41.9 s (4 boots) | **1.52–1.61 s** (4 boots) | 3.12–3.18 s (2) |
+| Weights evicted from page cache (mincore-verified) | 41.8–42.8 s (3) | **2.96–2.98 s** (3) | 10.3–12.0 s (2) |
+| Evicted + compile caches cleared | 89.5–89.9 s (3) | n/a (no JIT) | n/a |
+| `/health` → first token | +0.13 s | +0.14 s | +0.17 s |
+| Restart after SIGTERM | 41.2 s | **1.66 s** | — |
+| VRAM after load | 20,541–21,621 MiB (0.90 util) | 14,051 MiB | 17,265 MiB |
 
 `startupProbe` implication: vLLM needs ≥ 120 s of budget (cold-compile 90 s + margin); QVAC needs ~10 s.
 
@@ -513,14 +579,14 @@ invisible to it. This needs a fix and a regression test.
 
 ## 10. Quality (temperature 0, thinking disabled per request)
 
-Source: `{vllm,qvac-q4km}/quality.jsonl`. Re-score with `python3 scripts/h2h_quality.py compare …`.
+Source: `head-to-head-a10/{vllm,qvac-q4km}/quality.jsonl`, `head-to-head-a10-rerun/qvac-q8/quality.jsonl`. Re-score with `python3 scripts/h2h_quality.py compare …`.
 
 | Test | vLLM AWQ-INT4 | QVAC Q4_K_M | QVAC Q8_0 |
 |---|---|---|---|
-| Short answers (40) | 31/40 | **32/40** | pending rerun |
-| `response_format: json_schema` (5) | 5/5 | **0/5: every request returns 400 `Failed to initialize samplers: std::exception`** | pending |
-| Tool calls (5) | 5/5 (needs `--enable-auto-tool-choice --tool-call-parser hermes`) | 5/5 (jinja on by default) | pending |
-| Exact-text agreement with vLLM | — | 30/40 (after stripping QVAC's empty `<think>\n\n</think>` wrapper; 0/40 raw) | pending |
+| Short answers (40) | 31/40 | **32/40** | 30/40 |
+| `response_format: json_schema` (5) | 5/5 | **0/5: every request returns 400 `Failed to initialize samplers: std::exception`** | **0/5**, same error |
+| Tool calls (5) | 5/5 (needs `--enable-auto-tool-choice --tool-call-parser hermes`) | 5/5 (jinja on by default) | 5/5 |
+| Exact-text agreement with vLLM | — | 30/40 (after stripping QVAC's empty `<think>\n\n</think>` wrapper; 0/40 raw) | 32/40 (32/40 with Q4_K_M) |
 
 The misses on both engines are genuine no-think arithmetic and string-reversal errors.
 Even with `enable_thinking: false`, QVAC prefixes every answer with an empty `<think></think>` block,
@@ -561,11 +627,11 @@ Where QVAC is better: start-up (1.5–3 s vs 41–90 s), SIGTERM exit, restart t
 | 5 | First pass: "on vLLM the API stayed green" under freeze | True only when freezing the EngineCore child. A whole-group freeze hangs `/health`. | failure.txt |
 | 6 | Launch prompt: llama.cpp slots are separate caches, and the RAM cache might bridge them | Slots are separate, and **neither `-cram` nor `-kvu` bridges them** (1/N hit rate) | F_cross ×3 configs |
 | 7 | Launch-prompt estimate "~30 warm / ~15 cold at 5 users on an A10" | Measured **26 warm / 16 cold**. Close; the cold estimate holds. | §4 |
-| 8 | *This session:* the first Q8_0 pass | **Invalid: it served Q4_K_M.** `h2h_serve.sh` sourced env.sh after the caller's `GGUF=…`, so the override was lost. Fixed (caller overrides win). Data quarantined. | `logs/cmds/q8-*.cmd` show `-m …Q4_K_M.gguf` |
+| 8 | *This session:* the first Q8_0 pass | **Invalid: it served Q4_K_M.** `h2h_serve.sh` sourced env.sh after the caller's `GGUF=…`, so the override was lost. Fixed (caller overrides win). Data quarantined; Q8_0 re-measured on a second A10 with a Q4_K_M anchor (§6b). | `logs/cmds/q8-*.cmd` show `-m …Q4_K_M.gguf` |
+| 9 | *This session:* the first vLLM failure-probe block | The probe helper passed a header as curl's timeout. Its "normal request after storm: 000 timeout" is an artifact. Corrected runs are `vllm-fail2/3`. | `vllm/failure.txt` |
 
 ## 14. Open items
 
-- **Q8_0 rerun** on an A10, with a Q4_K_M anchor (`scripts/h2h_q8_rerun.sh`), waiting for availability.
 - `wedge.py` misses mid-stream stalls. It needs a fix plus a regression test.
 - vLLM SIGTERM drain takes 117 s and sends no `[DONE]`. Set `terminationGracePeriodSeconds` accordingly, and check how the gateway handles upstream EOF.
 - vLLM cold at 8 users is 19.6, just under 20. Decide whether cold bursts at 8 users are in scope for R1. Chunked-prefill tuning is untested.
@@ -576,6 +642,8 @@ Where QVAC is better: start-up (1.5–3 s vs 41–90 s), SIGTERM exit, restart t
 
 | Item | Value |
 |---|---|
-| Box | $0.28/hr (incl. 120 GB disk), 9.1 h, destroyed 02:25 UTC; instances and volumes `[]`; throwaway SSH key deleted |
-| Spent | **$2.53** (credit 4.40 → 1.87) |
+| Main box | $0.28/hr (incl. 120 GB disk), 9.1 h, destroyed 02:25 UTC: $2.53 |
+| Q8_0 box | $0.23/hr, 1.3 h, destroyed 06:45 UTC: $0.48 |
+| Teardown | both destroyed; instances and volumes `[]`; both throwaway SSH keys deleted from the account and locally; throwaway API keys redacted from all pulled logs |
+| Spent | **$3.01** (credit 4.40 → 1.39) |
 | Lost to harness bugs | ~$0.15 (boot-timer regex wait, idle gap after the vLLM matrix, wrong-revision boot) |

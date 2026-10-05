@@ -1,0 +1,19 @@
+STEP setup 05:39:34
+W: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+debconf: delaying package configuration, since apt-utils is not installed
+  build rc=0 version: 0.1.2-dev (build 9240, commit 7bb2161c6)
+  d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785  Qwen3-8B-Q4_K_M.gguf
+  408b955510e196121c1c375201744783b5c9a43c7956d73fc78df54c66e883d6  Qwen3-8B-Q8_0.gguf
+STEP anchor_q4km 05:52:47
+  q4km-anchor up on Qwen3-8B-Q4_K_M.gguf: 14051 MiB
+  bench qvac-q4km-anchor smoke A_warm_short A_cold_short: done
+STEP q8 06:10:45
+  /root/h2h/run/q8-boot-cold_weights.cmd:-m /root/models/Qwen3-8B-Q8_0.gguf
+  /root/h2h/run/q8-boot-warm.cmd:-m /root/models/Qwen3-8B-Q8_0.gguf
+  q8-main up on Qwen3-8B-Q8_0.gguf: 17265 MiB
+  bench qvac-q8 smoke A_warm_short A_cold_short: done
+  q8-cram0 up on Qwen3-8B-Q8_0.gguf: 17265 MiB
+  bench qvac-q8-cram0 A_warm_short: done
+  q8-quality up on Qwen3-8B-Q8_0.gguf: 17265 MiB
+  quality done
+STEP ALL_DONE 06:36:50
