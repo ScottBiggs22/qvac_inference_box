@@ -1,0 +1,304 @@
+0.00.097.232 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.232.822 I srv    load_model: loading model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.634.914 I cmn  common_init_: fit completed in 0.40 seconds: n_gpu_layers = 99, n_ctx = 65536, moe_cache_size = 0, prefetch_weights = off
+0.00.821.611 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.02.337.319 I cmn          init: llama threadpool init, n_threads = 32
+0.02.424.144 I srv    load_model: initializing, n_slots = 8, n_ctx_slot = 8192, kv_unified = 'false'
+0.02.424.322 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.02.434.567 I srv  llama_server: model loaded
+0.02.434.577 I srv  llama_server: listening on http://127.0.0.1:8000
+0.02.683.180 I slot get_availabl: id  7 | task -1 | selected slot by LRU, t_last = -1
+0.02.683.400 I slot launch_slot_: id  7 | task 0 | processing task, is_child = 0
+0.02.729.971 I slot print_timing: id  7 | task 0 | prompt eval time =      24.43 ms /    24 tokens (    1.02 ms per token,   982.44 tokens per second)
+0.02.729.979 I slot print_timing: id  7 | task 0 |        eval time =      22.09 ms /     3 tokens (   11.05 ms per token,    90.53 tokens per second)
+0.02.729.981 I slot print_timing: id  7 | task 0 |       total time =      46.52 ms /    27 tokens
+0.02.729.989 I slot print_timing: id  7 | task 0 |    graphs reused =          2
+0.02.730.042 I slot      release: id  7 | task 0 | stop processing: n_tokens = 26, truncated = 0
+0.02.746.709 I slot get_availabl: id  6 | task -1 | selected slot by LRU, t_last = -1
+0.02.746.843 I slot launch_slot_: id  6 | task 4 | processing task, is_child = 0
+0.03.107.895 I slot print_timing: id  6 | task 4 | prompt eval time =      20.17 ms /    39 tokens (    0.52 ms per token,  1933.76 tokens per second)
+0.03.107.900 I slot print_timing: id  6 | task 4 |        eval time =     340.86 ms /    46 tokens (    7.57 ms per token,   132.02 tokens per second)
+0.03.107.901 I slot print_timing: id  6 | task 4 |       total time =     361.03 ms /    85 tokens
+0.03.107.902 I slot print_timing: id  6 | task 4 |    graphs reused =         46
+0.03.107.925 I slot      release: id  6 | task 4 | stop processing: n_tokens = 84, truncated = 0
+0.03.126.056 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.464
+0.03.126.422 E common_sampler_init: error initializing grammar sampler for grammar:
+char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
+decimal-part ::= [0-9]{1,16}
+integral-part ::= [0] | [1-9] [0-9]{0,15}
+json-array ::= "[" space ("]" | json-value (space "," space json-value)* space "]")
+json-bool ::= "true" | "false"
+json-null ::= "null"
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}")
+json-string ::= "\"" ( [^"\\] | "\\" ( ["\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\""
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
+number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)?
+response-format ::= response-format-schema
+response-format-schema ::= "{" space response-format-schema-account-id-kv "," space response-format-schema-amount-kv "," space response-format-schema-currency-kv "," space response-format-schema-direction-kv space "}"
+response-format-schema-account-id-kv ::= "\"account_id\"" space ":" space string
+response-format-schema-amount-kv ::= "\"amount\"" space ":" space number
+response-format-schema-currency-kv ::= "\"currency\"" space ":" space string
+response-format-schema-direction ::= ("\"debit\"" | "\"credit\"")
+response-format-schema-direction-kv ::= "\"direction\"" space ":" space response-format-schema-direction
+root ::= "<|im_start|>assistant\n" space space ("```json" space response-format space "```" | space response-format space)
+space ::= | " " | "\n"{1,2} [ \t]{0,20}
+string ::= "\"" char* "\""
+
+
+Generation prompt:
+'<|im_start|>assistant
+<think>
+
+</think>
+
+'
+0.03.126.453 E srv    send_error: task id = 51, error: Failed to initialize samplers: std::exception
+0.03.126.458 E srv  process_sing: failed to launch slot with task, id_task = 51
+0.03.126.490 W srv          stop: cancel task, id_task = 51
+0.03.145.024 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.464
+0.03.145.175 E common_sampler_init: error initializing grammar sampler for grammar:
+char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
+decimal-part ::= [0-9]{1,16}
+integral-part ::= [0] | [1-9] [0-9]{0,15}
+json-array ::= "[" space ("]" | json-value (space "," space json-value)* space "]")
+json-bool ::= "true" | "false"
+json-null ::= "null"
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}")
+json-string ::= "\"" ( [^"\\] | "\\" ( ["\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\""
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
+number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)?
+response-format ::= response-format-schema
+response-format-schema ::= "{" space response-format-schema-account-id-kv "," space response-format-schema-amount-kv "," space response-format-schema-currency-kv "," space response-format-schema-direction-kv space "}"
+response-format-schema-account-id-kv ::= "\"account_id\"" space ":" space string
+response-format-schema-amount-kv ::= "\"amount\"" space ":" space number
+response-format-schema-currency-kv ::= "\"currency\"" space ":" space string
+response-format-schema-direction ::= ("\"debit\"" | "\"credit\"")
+response-format-schema-direction-kv ::= "\"direction\"" space ":" space response-format-schema-direction
+root ::= "<|im_start|>assistant\n" space space ("```json" space response-format space "```" | space response-format space)
+space ::= | " " | "\n"{1,2} [ \t]{0,20}
+string ::= "\"" char* "\""
+
+
+Generation prompt:
+'<|im_start|>assistant
+<think>
+
+</think>
+
+'
+0.03.145.182 E srv    send_error: task id = 53, error: Failed to initialize samplers: std::exception
+0.03.145.186 E srv  process_sing: failed to launch slot with task, id_task = 53
+0.03.145.222 W srv          stop: cancel task, id_task = 53
+0.03.163.995 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 0.150 (> 0.100 thold), f_keep = 0.036
+0.03.164.225 E common_sampler_init: error initializing grammar sampler for grammar:
+boolean ::= ("true" | "false")
+json-array ::= "[" space ("]" | json-value (space "," space json-value)* space "]")
+json-bool ::= "true" | "false"
+json-null ::= "null"
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}")
+json-string ::= "\"" ( [^"\\] | "\\" ( ["\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\""
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
+response-format ::= response-format-schema
+response-format-schema ::= "{" space response-format-schema-ok-kv space "}"
+response-format-schema-ok-kv ::= "\"ok\"" space ":" space boolean
+root ::= "<|im_start|>assistant\n" space space ("```json" space response-format space "```" | space response-format space)
+space ::= | " " | "\n"{1,2} [ \t]{0,20}
+
+
+Generation prompt:
+'<|im_start|>assistant
+<think>
+
+</think>
+
+'
+0.03.164.239 E srv    send_error: task id = 55, error: Failed to initialize samplers: std::exception
+0.03.164.245 E srv  process_sing: failed to launch slot with task, id_task = 55
+0.03.164.275 W srv          stop: cancel task, id_task = 55
+0.03.186.459 I slot get_availabl: id  5 | task -1 | selected slot by LRU, t_last = -1
+0.03.186.719 I slot launch_slot_: id  5 | task 57 | processing task, is_child = 0
+0.03.439.389 I slot print_timing: id  5 | task 57 | prompt eval time =      56.83 ms /   247 tokens (    0.23 ms per token,  4346.45 tokens per second)
+0.03.439.394 I slot print_timing: id  5 | task 57 |        eval time =     195.82 ms /    26 tokens (    7.83 ms per token,   127.67 tokens per second)
+0.03.439.396 I slot print_timing: id  5 | task 57 |       total time =     252.65 ms /   273 tokens
+0.03.439.397 I slot print_timing: id  5 | task 57 |    graphs reused =         69
+0.03.439.448 I slot      release: id  5 | task 57 | stop processing: n_tokens = 272, truncated = 0
+0.03.455.729 I slot get_availabl: id  7 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.923
+0.03.455.860 I slot launch_slot_: id  7 | task 84 | processing task, is_child = 0
+0.03.455.871 W slot   operator(): id  7 | task 84 | need to evaluate at least 1 token for each active slot (n_past = 24, task.n_tokens() = 24)
+0.03.455.872 W slot   operator(): id  7 | task 84 | n_past was set to 23
+0.03.482.435 I slot print_timing: id  7 | task 84 | prompt eval time =       9.28 ms /     1 tokens (    9.28 ms per token,   107.82 tokens per second)
+0.03.482.440 I slot print_timing: id  7 | task 84 |        eval time =      17.28 ms /     3 tokens (    8.64 ms per token,   115.74 tokens per second)
+0.03.482.441 I slot print_timing: id  7 | task 84 |       total time =      26.55 ms /     4 tokens
+0.03.482.442 I slot print_timing: id  7 | task 84 |    graphs reused =         71
+0.03.482.464 I slot      release: id  7 | task 84 | stop processing: n_tokens = 26, truncated = 0
+0.03.490.562 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.464
+0.03.490.687 I slot launch_slot_: id  6 | task 88 | processing task, is_child = 0
+0.03.490.699 W slot   operator(): id  6 | task 88 | need to evaluate at least 1 token for each active slot (n_past = 39, task.n_tokens() = 39)
+0.03.490.703 W slot   operator(): id  6 | task 88 | n_past was set to 38
+0.03.838.545 I slot print_timing: id  6 | task 88 | prompt eval time =       9.40 ms /     1 tokens (    9.40 ms per token,   106.42 tokens per second)
+0.03.838.551 I slot print_timing: id  6 | task 88 |        eval time =     338.44 ms /    46 tokens (    7.52 ms per token,   132.96 tokens per second)
+0.03.838.552 I slot print_timing: id  6 | task 88 |       total time =     347.83 ms /    47 tokens
+0.03.838.552 I slot print_timing: id  6 | task 88 |    graphs reused =        116
+0.03.838.577 I slot      release: id  6 | task 88 | stop processing: n_tokens = 84, truncated = 0
+0.03.847.660 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.464
+0.03.847.929 E common_sampler_init: error initializing grammar sampler for grammar:
+char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
+decimal-part ::= [0-9]{1,16}
+integral-part ::= [0] | [1-9] [0-9]{0,15}
+json-array ::= "[" space ("]" | json-value (space "," space json-value)* space "]")
+json-bool ::= "true" | "false"
+json-null ::= "null"
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}")
+json-string ::= "\"" ( [^"\\] | "\\" ( ["\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\""
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
+number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)?
+response-format ::= response-format-schema
+response-format-schema ::= "{" space response-format-schema-account-id-kv "," space response-format-schema-amount-kv "," space response-format-schema-currency-kv "," space response-format-schema-direction-kv space "}"
+response-format-schema-account-id-kv ::= "\"account_id\"" space ":" space string
+response-format-schema-amount-kv ::= "\"amount\"" space ":" space number
+response-format-schema-currency-kv ::= "\"currency\"" space ":" space string
+response-format-schema-direction ::= ("\"debit\"" | "\"credit\"")
+response-format-schema-direction-kv ::= "\"direction\"" space ":" space response-format-schema-direction
+root ::= "<|im_start|>assistant\n" space space ("```json" space response-format space "```" | space response-format space)
+space ::= | " " | "\n"{1,2} [ \t]{0,20}
+string ::= "\"" char* "\""
+
+
+Generation prompt:
+'<|im_start|>assistant
+<think>
+
+</think>
+
+'
+0.03.847.939 E srv    send_error: task id = 135, error: Failed to initialize samplers: std::exception
+0.03.847.943 E srv  process_sing: failed to launch slot with task, id_task = 135
+0.03.847.975 W srv          stop: cancel task, id_task = 135
+0.03.857.299 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.464
+0.03.857.464 E common_sampler_init: error initializing grammar sampler for grammar:
+char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
+decimal-part ::= [0-9]{1,16}
+integral-part ::= [0] | [1-9] [0-9]{0,15}
+json-array ::= "[" space ("]" | json-value (space "," space json-value)* space "]")
+json-bool ::= "true" | "false"
+json-null ::= "null"
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}")
+json-string ::= "\"" ( [^"\\] | "\\" ( ["\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\""
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
+number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)?
+response-format ::= response-format-schema
+response-format-schema ::= "{" space response-format-schema-account-id-kv "," space response-format-schema-amount-kv "," space response-format-schema-currency-kv "," space response-format-schema-direction-kv space "}"
+response-format-schema-account-id-kv ::= "\"account_id\"" space ":" space string
+response-format-schema-amount-kv ::= "\"amount\"" space ":" space number
+response-format-schema-currency-kv ::= "\"currency\"" space ":" space string
+response-format-schema-direction ::= ("\"debit\"" | "\"credit\"")
+response-format-schema-direction-kv ::= "\"direction\"" space ":" space response-format-schema-direction
+root ::= "<|im_start|>assistant\n" space space ("```json" space response-format space "```" | space response-format space)
+space ::= | " " | "\n"{1,2} [ \t]{0,20}
+string ::= "\"" char* "\""
+
+
+Generation prompt:
+'<|im_start|>assistant
+<think>
+
+</think>
+
+'
+0.03.857.472 E srv    send_error: task id = 137, error: Failed to initialize samplers: std::exception
+0.03.857.475 E srv  process_sing: failed to launch slot with task, id_task = 137
+0.03.857.493 W srv          stop: cancel task, id_task = 137
+0.03.866.644 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 0.150 (> 0.100 thold), f_keep = 0.036
+0.03.866.751 E common_sampler_init: error initializing grammar sampler for grammar:
+boolean ::= ("true" | "false")
+json-array ::= "[" space ("]" | json-value (space "," space json-value)* space "]")
+json-bool ::= "true" | "false"
+json-null ::= "null"
+json-number ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") [+-]? [0-9]+)?
+json-object ::= "{" space ("}" | json-string space ":" space json-value (space "," space json-string space ":" space json-value)* space "}")
+json-string ::= "\"" ( [^"\\] | "\\" ( ["\\/ bfnrt] | "u" [0-9a-fA-F]{4} ) )* "\""
+json-value ::= json-object | json-array | json-string | json-number | json-bool | json-null
+response-format ::= response-format-schema
+response-format-schema ::= "{" space response-format-schema-ok-kv space "}"
+response-format-schema-ok-kv ::= "\"ok\"" space ":" space boolean
+root ::= "<|im_start|>assistant\n" space space ("```json" space response-format space "```" | space response-format space)
+space ::= | " " | "\n"{1,2} [ \t]{0,20}
+
+
+Generation prompt:
+'<|im_start|>assistant
+<think>
+
+</think>
+
+'
+0.03.866.758 E srv    send_error: task id = 139, error: Failed to initialize samplers: std::exception
+0.03.866.762 E srv  process_sing: failed to launch slot with task, id_task = 139
+0.03.866.778 W srv          stop: cancel task, id_task = 139
+0.03.877.690 I slot get_availabl: id  5 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.908
+0.03.877.918 I slot launch_slot_: id  5 | task 141 | processing task, is_child = 0
+0.03.877.929 W slot   operator(): id  5 | task 141 | need to evaluate at least 1 token for each active slot (n_past = 247, task.n_tokens() = 247)
+0.03.877.930 W slot   operator(): id  5 | task 141 | n_past was set to 246
+0.04.081.908 I slot print_timing: id  5 | task 141 | prompt eval time =       9.76 ms /     1 tokens (    9.76 ms per token,   102.50 tokens per second)
+0.04.081.912 I slot print_timing: id  5 | task 141 |        eval time =     194.22 ms /    26 tokens (    7.77 ms per token,   128.72 tokens per second)
+0.04.081.913 I slot print_timing: id  5 | task 141 |       total time =     203.97 ms /    27 tokens
+0.04.081.914 I slot print_timing: id  5 | task 141 |    graphs reused =        140
+0.04.081.962 I slot      release: id  5 | task 141 | stop processing: n_tokens = 272, truncated = 0
+0.04.098.776 I slot get_availabl: id  7 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.769
+0.04.098.865 I slot launch_slot_: id  7 | task 168 | processing task, is_child = 0
+0.04.098.874 W slot   operator(): id  7 | task 168 | need to evaluate at least 1 token for each active slot (n_past = 20, task.n_tokens() = 20)
+0.04.098.875 W slot   operator(): id  7 | task 168 | n_past was set to 19
+0.05.213.375 I slot print_timing: id  7 | task 168 | prompt eval time =       9.33 ms /     1 tokens (    9.33 ms per token,   107.16 tokens per second)
+0.05.213.380 I slot print_timing: id  7 | task 168 |        eval time =    1105.16 ms /   148 tokens (    7.52 ms per token,   133.01 tokens per second)
+0.05.213.382 I slot print_timing: id  7 | task 168 |       total time =    1114.49 ms /   149 tokens
+0.05.213.383 I slot print_timing: id  7 | task 168 |    graphs reused =        287
+0.05.213.401 I slot      release: id  7 | task 168 | stop processing: n_tokens = 167, truncated = 0
+0.05.230.804 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.417
+0.05.230.891 I slot launch_slot_: id  6 | task 317 | processing task, is_child = 0
+0.05.230.900 W slot   operator(): id  6 | task 317 | need to evaluate at least 1 token for each active slot (n_past = 35, task.n_tokens() = 35)
+0.05.230.901 W slot   operator(): id  6 | task 317 | n_past was set to 34
+0.08.246.554 I slot print_timing: id  6 | task 317 | n_gen =    400, tg = 132.74 t/s, tg_3s = 133.07 t/s
+0.08.465.656 I slot print_timing: id  6 | task 317 | prompt eval time =       9.67 ms /     1 tokens (    9.67 ms per token,   103.44 tokens per second)
+0.08.465.661 I slot print_timing: id  6 | task 317 |        eval time =    3225.09 ms /   429 tokens (    7.54 ms per token,   132.71 tokens per second)
+0.08.465.663 I slot print_timing: id  6 | task 317 |       total time =    3234.75 ms /   430 tokens
+0.08.465.663 I slot print_timing: id  6 | task 317 |    graphs reused =        714
+0.08.465.683 I slot      release: id  6 | task 317 | stop processing: n_tokens = 463, truncated = 0
+0.08.485.007 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.076
+0.08.485.227 I slot launch_slot_: id  6 | task 747 | processing task, is_child = 0
+0.08.485.237 W slot   operator(): id  6 | task 747 | need to evaluate at least 1 token for each active slot (n_past = 35, task.n_tokens() = 35)
+0.08.485.238 W slot   operator(): id  6 | task 747 | n_past was set to 34
+0.09.023.095 I slot print_timing: id  6 | task 747 | prompt eval time =      62.30 ms /     1 tokens (   62.30 ms per token,    16.05 tokens per second)
+0.09.023.113 I slot print_timing: id  6 | task 747 |        eval time =     475.53 ms /    49 tokens (    9.91 ms per token,   100.94 tokens per second)
+0.09.023.114 I slot print_timing: id  6 | task 747 |       total time =     537.83 ms /    50 tokens
+0.09.023.116 I slot print_timing: id  6 | task 747 |    graphs reused =        762
+0.09.023.172 I slot      release: id  6 | task 747 | stop processing: n_tokens = 83, truncated = 0
+0.09.042.341 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.422
+0.09.042.628 I slot launch_slot_: id  6 | task 797 | processing task, is_child = 0
+0.09.042.643 W slot   operator(): id  6 | task 797 | need to evaluate at least 1 token for each active slot (n_past = 35, task.n_tokens() = 35)
+0.09.042.643 W slot   operator(): id  6 | task 797 | n_past was set to 34
+0.09.558.418 I slot print_timing: id  6 | task 797 | prompt eval time =      40.88 ms /     1 tokens (   40.88 ms per token,    24.46 tokens per second)
+0.09.558.435 I slot print_timing: id  6 | task 797 |        eval time =     474.87 ms /    49 tokens (    9.89 ms per token,   101.08 tokens per second)
+0.09.558.436 I slot print_timing: id  6 | task 797 |       total time =     515.75 ms /    50 tokens
+0.09.558.437 I slot print_timing: id  6 | task 797 |    graphs reused =        811
+0.09.558.492 I slot      release: id  6 | task 797 | stop processing: n_tokens = 83, truncated = 0
+0.09.577.827 I slot get_availabl: id  6 | task -1 | selected slot by LCP similarity, f_sim_best = 0.188 (> 0.100 thold), f_keep = 0.036
+0.09.578.061 I slot launch_slot_: id  6 | task 847 | processing task, is_child = 0
+0.09.767.906 I slot print_timing: id  6 | task 847 | prompt eval time =      51.50 ms /    13 tokens (    3.96 ms per token,   252.43 tokens per second)
+0.09.767.923 I slot print_timing: id  6 | task 847 |        eval time =     138.31 ms /     7 tokens (   23.05 ms per token,    43.38 tokens per second)
+0.09.767.924 I slot print_timing: id  6 | task 847 |       total time =     189.80 ms /    20 tokens
+0.09.767.925 I slot print_timing: id  6 | task 847 |    graphs reused =        816
+0.09.767.970 I slot      release: id  6 | task 847 | stop processing: n_tokens = 22, truncated = 0
+0.09.790.227 I slot get_availabl: id  5 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.893
+0.09.790.561 I slot launch_slot_: id  5 | task 855 | processing task, is_child = 0
+0.09.790.575 W slot   operator(): id  5 | task 855 | need to evaluate at least 1 token for each active slot (n_past = 243, task.n_tokens() = 243)
+0.09.790.576 W slot   operator(): id  5 | task 855 | n_past was set to 242
+0.10.946.287 I slot print_timing: id  5 | task 855 | prompt eval time =       9.76 ms /     1 tokens (    9.76 ms per token,   102.47 tokens per second)
+0.10.946.292 I slot print_timing: id  5 | task 855 |        eval time =    1145.94 ms /   152 tokens (    7.59 ms per token,   131.77 tokens per second)
+0.10.946.293 I slot print_timing: id  5 | task 855 |       total time =    1155.70 ms /   153 tokens
+0.10.946.294 I slot print_timing: id  5 | task 855 |    graphs reused =        966
+0.10.946.341 I slot      release: id  5 | task 855 | stop processing: n_tokens = 394, truncated = 0

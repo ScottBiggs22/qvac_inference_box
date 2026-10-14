@@ -1,0 +1,18 @@
+STEP run QWEN3_8B_INST_Q4_K_M parallel=1 06:18:33
+  ready after 158.3 s; pid alive: no
+  /health -> 000
+  /metrics -> 000
+  gpu after load: 1 MiB, 0 %
+  loadgen rc=1
+    response = await transport.handle_async_request(request)
+  File "/usr/local/lib/python3.10/dist-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.10/dist-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
+  peak gpu row: 2026/10/14 06:21:12.073, 0 %, 1 MiB
+  kv-cache files: 0, files containing plaintext prompt text: 0
+/root/repo/scripts/qvac_serve_side_test.sh: line 78: kill: (7657) - No such process
+STEP RUN_DONE 06:21:15

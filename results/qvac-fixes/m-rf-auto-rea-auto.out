@@ -1,0 +1,18 @@
+rf=auto rea=auto         think=absent none             200 
+rf=auto rea=auto         think=absent json_object      200 True
+rf=auto rea=auto         think=absent schema_strict    200 True
+rf=auto rea=auto         think=absent schema_nonstrict 200 True
+rf=auto rea=auto         think=absent schema_trivial   200 True
+rf=auto rea=auto         think=absent tool             200 True
+rf=auto rea=auto         think=false  none             200 
+rf=auto rea=auto         think=false  json_object      200 False
+rf=auto rea=auto         think=false  schema_strict    200 True
+rf=auto rea=auto         think=false  schema_nonstrict 200 True
+rf=auto rea=auto         think=false  schema_trivial   200 True
+rf=auto rea=auto         think=false  tool             200 True
+rf=auto rea=auto         think=true   none             200 
+rf=auto rea=auto         think=true   json_object      200 True
+rf=auto rea=auto         think=true   schema_strict    200 True
+rf=auto rea=auto         think=true   schema_nonstrict 200 True
+rf=auto rea=auto         think=true   schema_trivial   200 True
+rf=auto rea=auto         think=true   tool             200 True

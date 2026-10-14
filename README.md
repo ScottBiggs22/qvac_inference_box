@@ -194,7 +194,9 @@ Measured on a rented A10 on 2026-10-02/03, the same box as vLLM. The full compar
   (sha256 `d98cdcbd…5785`). Q8_0 measured as a control: slightly faster at 8
   users (22.9), slower at 1 user (48.6), and no answer-quality gain.
 - Launch flags (`deploy/k8s/probes.yaml`): `-m <gguf> -c 65536 -np 8 -ngl 99 -fa on
-  -cram 0 --metrics --reasoning-format none --alias qwen3-8b --api-key …`. `-c` is the
+  -cram 0 --metrics --alias qwen3-8b --api-key …`. **Do not add `--reasoning-format none`**:
+  it breaks `json_schema` with `enable_thinking:false` (HTTP 400), so leave the default `auto`
+  (`docs/QVAC_FIXES_RESULTS.md`). `-c` is the
   **total** context across slots (8192 per slot). **`-cram 0` is required**: the default
   host-RAM prompt cache adds 2.5–4.4 s of TTFT under concurrency. **Never use
   `-kvu`.** There is no `--openai` flag.
@@ -204,9 +206,9 @@ Measured on a rented A10 on 2026-10-02/03, the same box as vLLM. The full compar
   Timings are sized to the measured boot (startup 2 s × 15). QVAC exits 0.6 s after
   SIGTERM and **cuts in-flight streams**, so the manifest drains with a `preStop`
   sleep. Mechanism and reasoning are in `docs/PROBE_CONTRACT.md`.
-- Not supported on this build: `response_format: json_schema` (HTTP 400),
-  cross-slot prefix-cache sharing, native TLS (needs an SSL build) and mTLS
-  (no option exists). Tool calls work.
+- Not supported on this build: cross-slot prefix-cache sharing, native TLS (needs an SSL
+  build) and mTLS (no option exists). Tool calls and `response_format: json_schema` work
+  (5/5 each). `json_object` is not enforced when thinking is off, so use `json_schema`.
 - HA target: ≥2 production replicas, in different fault domains, listed
   together in the gateway's `UPSTREAM_URLS` — unchanged from the vLLM plan,
   but QVAC's real per-replica concurrent-user capacity (checklist item 3) is

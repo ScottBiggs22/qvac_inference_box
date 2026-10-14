@@ -91,6 +91,12 @@ _WORDS = (
 class StubState:
     def __init__(self) -> None:
         self.think = False
+        # "inline": think text in `content` (vLLM without a reasoning parser,
+        # or QVAC with --reasoning-format none). "split": QVAC's default
+        # --reasoning-format auto -- think text in `reasoning_content`, the
+        # answer alone in `content`, nothing at all when the request sends
+        # enable_thinking: false (measured, docs/QVAC_FIXES_RESULTS.md).
+        self.reasoning_format = "inline"
         self.latency = 0.0
         self.fail_after: int | None = None
         self.requests = 0
@@ -301,8 +307,15 @@ async def chat_completions(request: Request):
         # bookkeeping is what has to catch this; no HTTP probe can.
         await asyncio.Event().wait()  # never returns; the caller must time out
 
-    text = _completion_text(body, max_tokens)
-    completion_tokens = len(text.split())
+    reasoning = ""
+    if state.think and state.reasoning_format == "split":
+        text = _deterministic_text(_seed_of(body), max_tokens)
+        kwargs = body.get("chat_template_kwargs") or {}
+        if kwargs.get("enable_thinking", True) is not False:
+            reasoning = _deterministic_text("think" + _seed_of(body), 40)
+    else:
+        text = _completion_text(body, max_tokens)
+    completion_tokens = len(text.split()) + len(reasoning.split())
 
     async with state.sem:
         if state.latency:
@@ -327,7 +340,7 @@ async def chat_completions(request: Request):
         include_usage = bool((body.get("stream_options") or {}).get("include_usage"))
         return StreamingResponse(
             _stream(cid, created, body.get("model", STUB_MODEL), text,
-                    usage if include_usage else None),
+                    usage if include_usage else None, reasoning),
             media_type="text/event-stream",
         )
 
@@ -339,7 +352,8 @@ async def chat_completions(request: Request):
         "choices": [
             {
                 "index": 0,
-                "message": {"role": "assistant", "content": text},
+                "message": {"role": "assistant", "content": text,
+                            **({"reasoning_content": reasoning} if reasoning else {})},
                 "finish_reason": "stop",
             }
         ],
@@ -348,7 +362,7 @@ async def chat_completions(request: Request):
 
 
 async def _stream(cid: str, created: int, model: str, text: str,
-                  usage: dict | None = None):
+                  usage: dict | None = None, reasoning: str = ""):
     """SSE in the OpenAI delta format, terminated by the literal [DONE].
 
     The gateway passes this through rather than buffering it, so the exact frame
@@ -368,6 +382,8 @@ async def _stream(cid: str, created: int, model: str, text: str,
         return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
     yield frame({"role": "assistant", "content": ""})
+    for word in reasoning.split():
+        yield frame({"reasoning_content": word + " "})
     for word in text.split():
         if state.latency:
             await asyncio.sleep(min(state.latency / 50.0, 0.05))
@@ -397,6 +413,11 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8001)
     ap.add_argument("--stub-think", action="store_true",
                     help="Emit a Qwen3 <think> block, to exercise the B3 stripper.")
+    ap.add_argument("--stub-reasoning-format", choices=("inline", "split"),
+                    default="inline",
+                    help="With --stub-think: 'inline' puts the <think> block in "
+                         "content; 'split' emulates QVAC's default reasoning "
+                         "parser (reasoning_content, honours enable_thinking).")
     ap.add_argument("--stub-latency", type=float, default=0.0,
                     help="Seconds of simulated decode time per request.")
     ap.add_argument("--stub-fail-after", type=int, default=None,
@@ -430,6 +451,7 @@ def main() -> None:
     args = ap.parse_args()
 
     state.think = args.stub_think
+    state.reasoning_format = args.stub_reasoning_format
     state.latency = args.stub_latency
     state.fail_after = args.stub_fail_after
     state.wedge = args.stub_wedge

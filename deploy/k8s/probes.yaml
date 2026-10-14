@@ -58,11 +58,14 @@ spec:
             # Do NOT add -kvu: measured 16.7 s / 29 s warm TTFT at 5 / 8 users
             # and half the aggregate throughput.
             - --metrics
-            # Qwen3 thinks by default; without this the think text lands in
-            # reasoning_content and `content` is empty. Matches vLLM run
-            # without a reasoning parser.
-            - --reasoning-format
-            - none
+            # No --reasoning-format: the default (auto) parses Qwen3's think
+            # text into `reasoning_content`, leaving `content` clean. Do NOT set
+            # `none`. With it, every json_schema request sent with
+            # enable_thinking:false fails HTTP 400 ("Failed to initialize
+            # samplers"), and `content` carries an empty <think></think>
+            # wrapper (docs/QVAC_FIXES_RESULTS.md). Clients send
+            # enable_thinking:false and strip_think as before; under auto the
+            # stripper is a no-op.
             - --alias
             - qwen3-8b
             - --api-key

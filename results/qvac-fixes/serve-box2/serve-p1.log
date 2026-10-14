@@ -1,0 +1,11 @@
+ffmpeg not on PATH — /v1/videos/{id}/content defaults to video/avi and /v1/audio/speech rejects mp3/opus/aac/flac. Install ffmpeg to serve those. See: qvac doctor
+(node:7657) [FSTDEP023] FastifyDeprecation: disableRequestLogging option is deprecated. Use the logController option with disableRequestLogging or isLogDisabled override instead. The disableRequestLogging top-level option will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Preloading 1 model(s): qwen3-8b
+Loading model "qwen3-8b" from registry://hf/Qwen/Qwen3-8B-GGUF/blob/main/Qwen3-8B-Q4_K_M.gguf...
+[QVACRegistryClient] [INFO] Downloading blob directly {
+  coreKey: '6309722b3460...',
+  blockOffset: 719180,
+  blockLength: 76718,
+  byteLength: 5027783488
+}

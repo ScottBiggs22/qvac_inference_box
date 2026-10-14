@@ -1,0 +1,41 @@
+Usage: qvac serve [options] [command]
+
+Start an API server backed by QVAC
+
+Options:
+  --no-default                    Do not mount the default surface
+  --openai                        Mount the OpenAI-compatible REST API
+  -c, --config <path>             Config file path (default: auto-detect
+                                  qvac.config.*)
+  -p, --port <number>             Port to listen on (default: "11434")
+  -H, --host <address>            Host to bind to (default: "127.0.0.1")
+  --model <alias>                 Model alias to preload (repeatable, must be in
+                                  config) (default: [])
+  --api-key <key>                 Require Bearer token authentication
+  --api-key-file <path>           Read the Bearer token from a file instead of
+                                  argv (keeps it out of the process list)
+  --allow-unauthenticated         Permit binding to a non-loopback host without
+                                  an API key
+  --cors                          Validate that explicit trusted CORS origins
+                                  are configured
+  --cors-origin <origin>          Trusted CORS origin (repeatable) (default: [])
+  --public-base-url <url>         Externally reachable origin (required for
+                                  image response_format=url)
+  --docs                          Expose Swagger UI at /docs and add same-port
+                                  loopback CORS origins; requires a fixed --port
+                                  (JSON spec is always at /openapi.json)
+  --no-lazy-load                  Disable lazy loading; a request for an
+                                  unloaded model returns 503 model_not_loaded
+                                  instead of loading it
+  --load-concurrency <n>          Max simultaneous model loads (default: 1)
+  --load-timeout <ms>             Per-load timeout in milliseconds (default:
+                                  unbounded)
+  --no-cancel-load-on-disconnect  Keep loading a model even if the client that
+                                  triggered the load disconnects
+  -v, --verbose                   Detailed output
+  -h, --help                      display help for command
+
+Commands:
+  openai [options]                Deprecated: start the OpenAI-compatible REST
+                                  API server with `qvac serve --openai
+                                  --no-default`

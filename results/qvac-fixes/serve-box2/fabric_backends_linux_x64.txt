@@ -1,0 +1,17 @@
+libqvac-ggml-cpu-alderlake.so
+libqvac-ggml-cpu-cannonlake.so
+libqvac-ggml-cpu-cascadelake.so
+libqvac-ggml-cpu-cooperlake.so
+libqvac-ggml-cpu-haswell.so
+libqvac-ggml-cpu-icelake.so
+libqvac-ggml-cpu-ivybridge.so
+libqvac-ggml-cpu-piledriver.so
+libqvac-ggml-cpu-sandybridge.so
+libqvac-ggml-cpu-sapphirerapids.so
+libqvac-ggml-cpu-skylakex.so
+libqvac-ggml-cpu-sse42.so
+libqvac-ggml-cpu-x64.so
+libqvac-ggml-cpu-zen4.so
+libqvac-ggml-hip.so
+libqvac-ggml-rpc.so
+libqvac-ggml-vulkan.so

@@ -1,0 +1,6 @@
+STEP setup 02:32:16
+debconf: delaying package configuration, since apt-utils is not installed
+  build rc=0 version: 0.1.2-dev (build 9240, commit 7bb2161c6)
+d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785  /root/models/Qwen3-8B-Q4_K_M.gguf
+  Q4_K_M sha ok
+STEP SETUP_DONE 02:38:47

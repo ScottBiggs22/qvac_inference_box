@@ -1,0 +1,24 @@
+  ran baseline_no_flag                 status=200
+  ran flag_false                       status=200
+  ran flag_false_user_types_think      status=200
+  ran flag_false_user_types_no_think   status=200
+  ran flag_true_user_types_no_think    status=200
+  ran flag_absent_tight_budget         status=200
+  ran flag_false_tight_budget          status=200
+
+case                                 flag   thought   unterm   empty      finish
+------------------------------------------------------------------------------------
+baseline_no_flag                     None      True    False   False        stop
+flag_false                          False     False    False   False        stop
+flag_false_user_types_think         False     False    False   False        stop
+flag_false_user_types_no_think      False     False    False   False        stop
+flag_true_user_types_no_think        True     False    False   False        stop
+flag_absent_tight_budget             None      True    False    True      length
+flag_false_tight_budget             False     False    False   False        stop
+
+=== Verdicts ===
+B3 fix alone (enable_thinking: false): WORKS -- no reasoning block
+`/think` does NOT override the request flag. enable_thinking: false holds even when the user asks for reasoning, so the stripper is a belt rather than the primary defence.
+B3's stated failure at max_tokens=160: empty_answer=True without the fix, False with it
+
+wrote /root/h2h/out/qvac-fixes/b3-rf-auto.jsonl

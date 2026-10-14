@@ -192,7 +192,8 @@ number as real).
       exactly (its mTLS work was gateway-side only and explicitly scoped as
       "the security review has to run against the real deployment path," PRD
       §4.8 — never validated against a live vLLM either). Revisit before any
-      real (non-test) deployment: QVAC documents no TLS support of its own,
+      real (non-test) deployment: ~~QVAC documents no TLS support of its own~~
+      (corrected below: server-side TLS flags exist, no client-CA option),
       so a sidecar reverse proxy terminating TLS and forwarding plaintext to
       QVAC on localhost is the live option if mTLS is required — unbuilt,
       not attempted this pass.

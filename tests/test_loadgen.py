@@ -339,6 +339,55 @@ class TestServerSideTimings:
         assert len(res.itl_ms) == 2
         assert res.itl_ms_p50 is not None
 
+    async def test_reasoning_content_deltas_are_timed_and_counted_apart(self):
+        """QVAC's default --reasoning-format puts Qwen3's think text in
+        `reasoning_content`. Those frames are output: TTFT starts at the first
+        of them, decode spans both kinds, and a think-only stream is a real
+        (slow) answer, not an empty one -- but it stays visible as such."""
+        lg = _loadgen_module()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return _sse([
+                'data: {"choices":[{"index":0,"delta":{"role":"assistant",'
+                '"content":null}}]}',
+                'data: {"choices":[{"index":0,"delta":{"reasoning_content":"x"}}]}',
+                'data: {"choices":[{"index":0,"delta":{"reasoning_content":"y"}}]}',
+                'data: {"choices":[{"index":0,"delta":{"content":"a"}}]}',
+                'data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+                'data: {"choices":[],"usage":{"prompt_tokens":10,'
+                '"completion_tokens":3}}',
+                "data: [DONE]",
+            ])
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            res = await lg.one_request(client, "http://x/v1/chat/completions",
+                                       {}, level=1, worker=0)
+        assert res.ok
+        assert res.reasoning_frames == 2
+        assert res.content_frames == 1
+        assert len(res.itl_ms) == 2
+        assert res.decode_tok_s is not None
+
+    async def test_think_only_stream_is_ok_and_flagged_as_reasoning(self):
+        lg = _loadgen_module()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return _sse([
+                'data: {"choices":[{"index":0,"delta":{"reasoning_content":"x"}}]}',
+                'data: {"choices":[{"index":0,"delta":{"reasoning_content":"y"}}]}',
+                'data: {"choices":[{"index":0,"delta":{},"finish_reason":"length"}]}',
+                "data: [DONE]",
+            ])
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            res = await lg.one_request(client, "http://x/v1/chat/completions",
+                                       {}, level=1, worker=0)
+        assert res.ok
+        assert res.content_frames == 0
+        assert res.reasoning_frames == 2
+        # No usage frame: falls back to counting every output frame.
+        assert res.completion_tokens == 2
+
     async def test_vllm_shape_without_timings_still_reports_cached_tokens(self):
         lg = _loadgen_module()
 

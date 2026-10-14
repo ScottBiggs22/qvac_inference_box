@@ -85,14 +85,17 @@ case "$engine" in
     ;;
   qvac)
     # PHASE1_RESULTS_QVAC.md: -c is the TOTAL across slots, so -np 8 -c 65536
-    # is 8192 tokens per slot. --reasoning-format none puts Qwen3's think
-    # text in `content`, matching vLLM run without a reasoning parser.
+    # is 8192 tokens per slot. REASONING_FORMAT defaults to `auto`, the
+    # production value. The head-to-head ran `none` (think text in `content`),
+    # which breaks json_schema under enable_thinking:false with HTTP 400
+    # (docs/QVAC_FIXES_RESULTS.md). loadgen now times `reasoning_content` too,
+    # so perf and production run the same flags.
     np=${NP:-8}
     cmd=("${QVAC_BIN:-/root/qvac/build/bin/llama-server}"
          -m "${GGUF:-/root/models/Qwen3-8B-Q4_K_M.gguf}"
          -c $((8192 * np)) -np "$np" -ngl 99 -fa on
          --api-key "$API_KEY" --alias qwen3-8b --metrics
-         --reasoning-format none
+         --reasoning-format "${REASONING_FORMAT:-auto}"
          --host 127.0.0.1 --port "$PORT" "$@")
     ready_re='model loaded|listening on'
     ;;

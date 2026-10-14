@@ -1,0 +1,13 @@
+STEP m-rf-none-rea-auto 05:26:16
+  m-rf-none-rea-auto up: /root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 65536 -np 8 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format none --host 127.0.0.1 --port 8000 -cram 0 --reasoning auto 
+STEP m-rf-none-rea-off 05:26:34
+  m-rf-none-rea-off up: /root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 65536 -np 8 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format none --host 127.0.0.1 --port 8000 -cram 0 --reasoning off 
+STEP m-rf-auto-rea-auto 05:26:46
+  m-rf-auto-rea-auto up: /root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 65536 -np 8 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format auto --host 127.0.0.1 --port 8000 -cram 0 --reasoning auto 
+STEP m-rf-auto-rea-off 05:27:24
+  m-rf-auto-rea-off up: /root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 65536 -np 8 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format auto --host 127.0.0.1 --port 8000 -cram 0 --reasoning off 
+STEP m-rf-deepseek-rea-auto 05:27:47
+  m-rf-deepseek-rea-auto up: /root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 65536 -np 8 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format deepseek --host 127.0.0.1 --port 8000 -cram 0 --reasoning auto 
+STEP m-rf-deepseek-rea-off 05:28:26
+  m-rf-deepseek-rea-off up: /root/qvac/build/bin/llama-server -m /root/models/Qwen3-8B-Q4_K_M.gguf -c 65536 -np 8 -ngl 99 -fa on --api-key REDACTED --alias qwen3-8b --metrics --reasoning-format deepseek --host 127.0.0.1 --port 8000 -cram 0 --reasoning off 
+STEP MATRIX_DONE 05:28:50

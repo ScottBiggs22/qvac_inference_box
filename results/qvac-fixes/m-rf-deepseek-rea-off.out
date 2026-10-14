@@ -1,0 +1,18 @@
+rf=deepseek rea=off      think=absent none             200 
+rf=deepseek rea=off      think=absent json_object      200 False
+rf=deepseek rea=off      think=absent schema_strict    200 True
+rf=deepseek rea=off      think=absent schema_nonstrict 200 True
+rf=deepseek rea=off      think=absent schema_trivial   200 True
+rf=deepseek rea=off      think=absent tool             200 True
+rf=deepseek rea=off      think=false  none             200 
+rf=deepseek rea=off      think=false  json_object      200 False
+rf=deepseek rea=off      think=false  schema_strict    200 True
+rf=deepseek rea=off      think=false  schema_nonstrict 200 True
+rf=deepseek rea=off      think=false  schema_trivial   200 True
+rf=deepseek rea=off      think=false  tool             200 True
+rf=deepseek rea=off      think=true   none             200 
+rf=deepseek rea=off      think=true   json_object      200 True
+rf=deepseek rea=off      think=true   schema_strict    200 True
+rf=deepseek rea=off      think=true   schema_nonstrict 200 True
+rf=deepseek rea=off      think=true   schema_trivial   200 True
+rf=deepseek rea=off      think=true   tool             200 True

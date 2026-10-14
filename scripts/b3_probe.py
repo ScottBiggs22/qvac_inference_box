@@ -139,12 +139,23 @@ def probe(client: httpx.AsyncClient, url: str, model: str, case) -> dict:
         return row
 
     payload = resp.json()
-    raw = (payload["choices"][0]["message"].get("content") or "")
+    msg = payload["choices"][0]["message"]
+    raw = (msg.get("content") or "")
+    # llama.cpp with a reasoning parser (QVAC's default --reasoning-format auto)
+    # moves think text out of `content` into `reasoning_content`, so the
+    # stripper sees nothing and an exhausted budget shows up as EMPTY content,
+    # not as an unterminated block.
+    reasoning = (msg.get("reasoning_content") or "")
     stripped = strip_think(raw)
     usage = payload.get("usage") or {}
 
     row.update({
         "has_think_open": "<think>" in raw,
+        # Did the model actually reason? An EMPTY `<think>\n\n</think>` (what
+        # Qwen3's template pre-fills when thinking is off, visible in `content`
+        # under --reasoning-format none) is not reasoning, and neither is an
+        # empty reasoning_content.
+        "thought": bool(reasoning.strip()) or bool(re.search(r"<think>\s*\S", raw)),
         "has_think_close": "</think>" in raw,
         # An opened-but-unclosed block is the shape that empties an answer: the
         # allowance ran out mid-reasoning.
@@ -154,6 +165,10 @@ def probe(client: httpx.AsyncClient, url: str, model: str, case) -> dict:
         # The B3 failure, named: content came back, and nothing survived
         # stripping. `generate()` maps this to ("", True) -> degraded.
         "empty_after_strip": bool(raw) and not stripped,
+        # The same failure under a reasoning parser: nothing usable reached
+        # `content` at all, whether or not reasoning_content was filled.
+        "empty_answer": not stripped,
+        "reasoning_chars": len(reasoning),
         "finish_reason": payload["choices"][0].get("finish_reason"),
         "completion_tokens": usage.get("completion_tokens"),
         "raw_head": raw[:240],
@@ -198,7 +213,7 @@ def main() -> int:
 
     # ── Report ──────────────────────────────────────────────────────────────
     print()
-    print(f"{'case':<34} {'flag':>6}  {'<think>':>8}  {'unterm':>7}  "
+    print(f"{'case':<34} {'flag':>6}  {'thought':>8}  {'unterm':>7}  "
           f"{'empty':>6}  {'finish':>10}")
     print("-" * 84)
     for r in rows:
@@ -206,28 +221,28 @@ def main() -> int:
             print(f"{r['case']:<34} {'ERROR':>6}  {r['error'][:40]}")
             continue
         print(f"{r['case']:<34} {str(r['enable_thinking']):>6}  "
-              f"{str(r['has_think_open']):>8}  {str(r['think_unterminated']):>7}  "
-              f"{str(r['empty_after_strip']):>6}  {str(r['finish_reason']):>10}")
+              f"{str(r['thought']):>8}  {str(r['think_unterminated']):>7}  "
+              f"{str(r['empty_answer']):>6}  {str(r['finish_reason']):>10}")
 
     by_name = {r["case"]: r for r in rows}
     print()
     print("=== Verdicts ===")
 
     baseline = by_name.get("baseline_no_flag", {})
-    if baseline.get("error") is None and not baseline.get("has_think_open"):
+    if baseline.get("error") is None and not baseline.get("thought"):
         print("! baseline_no_flag produced NO <think> block. This build does not "
               "default to thinking mode, so B3's premise does not hold as stated "
               "here and every verdict below must be read in that light.")
 
     fix = by_name.get("flag_false", {})
     if fix.get("error") is None:
-        ok = not fix.get("has_think_open")
+        ok = not fix.get("thought")
         print(f"B3 fix alone (enable_thinking: false): "
               f"{'WORKS -- no reasoning block' if ok else 'IGNORED -- block still present'}")
 
     override = by_name.get("flag_false_user_types_think", {})
     if override.get("error") is None:
-        if override.get("has_think_open"):
+        if override.get("thought"):
             print("*** `/think` OVERRIDES the request flag. *** The soft switch wins. "
                   "The `strip_think` stripper is therefore LOAD-BEARING, not a belt: "
                   "any user typing /think re-enables reasoning, and with a tight "
@@ -242,8 +257,8 @@ def main() -> int:
     tight_on = by_name.get("flag_false_tight_budget", {})
     if tight_off.get("error") is None and tight_on.get("error") is None:
         print(f"B3's stated failure at max_tokens=160: "
-              f"empty_after_strip={tight_off.get('empty_after_strip')} without the "
-              f"fix, {tight_on.get('empty_after_strip')} with it")
+              f"empty_answer={tight_off.get('empty_answer')} without the "
+              f"fix, {tight_on.get('empty_answer')} with it")
 
     failures = [r for r in rows if r.get("error")]
     print()

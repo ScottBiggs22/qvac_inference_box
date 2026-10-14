@@ -47,9 +47,10 @@ the comparison holds (§6b).
 - **More 8k slots on one card with q8_0 KV**: 24 slots loaded in 20.2 GB.
 - **Quality:** Q4_K_M answers as well as AWQ (32/40 vs 31/40), and Q8_0 scores 30/40. Tool calls work on both.
 
-**What QVAC can't do (on this build)** is listed in §12. The headline items: no structured
-output (`response_format: json_schema` returns 400), no cross-slot prefix
-sharing, no native TLS in the documented build, and no mTLS at all.
+**What QVAC can't do (on this build)** is listed in §12. The headline items: no cross-slot prefix
+sharing, no native TLS in the documented build, and no mTLS at all. (~~No structured output~~:
+corrected 2026-10-13. The 400 was caused by our own `--reasoning-format none`, and `json_schema`
+passes 5/5 without it. See `docs/QVAC_FIXES_RESULTS.md`.)
 
 ## 2. Setup and provenance
 
@@ -588,6 +589,13 @@ Source: `head-to-head-a10/{vllm,qvac-q4km}/quality.jsonl`, `head-to-head-a10-rer
 | Tool calls (5) | 5/5 (needs `--enable-auto-tool-choice --tool-call-parser hermes`) | 5/5 (jinja on by default) | 5/5 |
 | Exact-text agreement with vLLM | — | 30/40 (after stripping QVAC's empty `<think>\n\n</think>` wrapper; 0/40 raw) | 32/40 (32/40 with Q4_K_M) |
 
+> **CORRECTION 2026-10-13 (`docs/QVAC_FIXES_RESULTS.md`, RTX 3090, same build).** Both the
+> json_schema 400 and the empty `<think>` wrapper were **self-inflicted by `--reasoning-format
+> none`**, which every run here used. The 400 fires when that flag meets an empty-think prefill
+> (`enable_thinking:false`, which this test sent). With the default `--reasoning-format auto`,
+> Q4_K_M scores json_schema **5/5**, tools 5/5, answers 32/40, and **32/40 raw** agreement with
+> vLLM, with no wrapper.
+
 The misses on both engines are genuine no-think arithmetic and string-reversal errors.
 Even with `enable_thinking: false`, QVAC prefixes every answer with an empty `<think></think>` block,
 and clients or the gateway must strip it.
@@ -608,9 +616,13 @@ and clients or the gateway must strip it.
 1. **Meet R1 with a cold prefix**: about 16 tok/s/user at 5 users in every config, against vLLM's 27.8.
 2. **Scale decode with concurrency**: 20 tok/s/user at 8 users (vLLM 43.2). Aggregate tops out at about 160 tok/s, against vLLM's 340 (or 483 at 16 users).
 3. **Share a cached prefix across concurrent requests**: per-slot caches only, so the hit rate is 1/N.
-4. **Structured output**: `response_format: json_schema` fails with HTTP 400.
+4. ~~**Structured output**: `response_format: json_schema` fails with HTTP 400.~~ *Corrected
+   2026-10-13:* it works (5/5) once `--reasoning-format none` is dropped. `json_object` is still
+   not enforced when thinking is off, so use `json_schema` (`docs/QVAC_FIXES_RESULTS.md`).
 5. **Predictable latency** with default flags: the host-RAM cache serializes ~1 GiB copies, adding up to 4.4 s TTFT at 8 users and degrading over time.
-6. **Native TLS** (needs a different build) and **mTLS** (no support at all).
+6. **Native TLS** (needs a different build) and **mTLS** (no support at all). Decision
+   2026-10-13: match the sister repo (gateway-side wiring only). The sidecar design is in
+   `docs/QVAC_FORK.md` item 6, unbuilt.
 7. **Latency metrics**: no TTFT, queue or ITL histograms server-side.
 
 Where QVAC is better: start-up (1.5–3 s vs 41–90 s), SIGTERM exit, restart time, VRAM per
@@ -629,6 +641,7 @@ Where QVAC is better: start-up (1.5–3 s vs 41–90 s), SIGTERM exit, restart t
 | 7 | Launch-prompt estimate "~30 warm / ~15 cold at 5 users on an A10" | Measured **26 warm / 16 cold**. Close; the cold estimate holds. | §4 |
 | 8 | *This session:* the first Q8_0 pass | **Invalid: it served Q4_K_M.** `h2h_serve.sh` sourced env.sh after the caller's `GGUF=…`, so the override was lost. Fixed (caller overrides win). Data quarantined; Q8_0 re-measured on a second A10 with a Q4_K_M anchor (§6b). | `logs/cmds/q8-*.cmd` show `-m …Q4_K_M.gguf` |
 | 9 | *This session:* the first vLLM failure-probe block | The probe helper passed a header as curl's timeout. Its "normal request after storm: 000 timeout" is an artifact. Corrected runs are `vllm-fail2/3`. | `vllm/failure.txt` |
+| 10 | §10/§12: json_schema 400 and the empty `<think>` wrapper are QVAC limits | Both caused by our `--reasoning-format none`. With the default parser: json_schema 5/5, no wrapper, 32/40 raw agreement. | `docs/QVAC_FIXES_RESULTS.md` |
 
 ## 14. Open items
 

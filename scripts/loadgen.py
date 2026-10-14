@@ -25,7 +25,13 @@ the code got there (PRD §4.8).
 
 WHAT IT MEASURES, AND THE DEFINITIONS IT USES
 =============================================
-  TTFT            request sent -> first content delta. Prefill plus queueing.
+  TTFT            request sent -> first output delta, `content` OR
+                  `reasoning_content`. Prefill plus queueing. (Before
+                  2026-10-13 only `content` counted; identical for vLLM without
+                  a reasoning parser and for QVAC with --reasoning-format none,
+                  where think text lands in `content`. With QVAC's default
+                  parser, think text arrives as `reasoning_content` and would
+                  otherwise be invisible -- docs/QVAC_FIXES_RESULTS.md.)
   decode tok/s    (completion_tokens - 1) / (last delta - first delta).
                   The -1 is not fussiness: the first token is produced BY
                   prefill, so counting it as decode inflates the rate, and at
@@ -171,6 +177,10 @@ class RequestResult:
     itl_ms_p95: float | None = None
     itl_ms_max: float | None = None
     content_frames: int = 0
+    # Frames whose delta carried `reasoning_content` (a llama.cpp reasoning
+    # parser's think text) rather than `content`. Timed exactly like content
+    # frames; counted apart so a think-only answer stays visible.
+    reasoning_frames: int = 0
     # Seconds from the start of the level, for the steady-state window.
     start_s: float | None = None
     first_s: float | None = None
@@ -439,6 +449,7 @@ async def one_request(client: httpx.AsyncClient, url: str, body: dict,
     t_first: float | None = None
     t_last: float | None = None
     delta_count = 0
+    reasoning_count = 0
     usage: dict | None = None
     timings: dict | None = None
     gaps: list[float] = []
@@ -469,8 +480,10 @@ async def one_request(client: httpx.AsyncClient, url: str, body: dict,
                 choices = frame.get("choices") or []
                 if not choices:
                     continue
-                content = (choices[0].get("delta") or {}).get("content") or ""
-                if content:
+                delta = choices[0].get("delta") or {}
+                content = delta.get("content") or ""
+                reasoning = delta.get("reasoning_content") or ""
+                if content or reasoning:
                     now = time.perf_counter()
                     if t_first is None:
                         t_first = now
@@ -478,6 +491,8 @@ async def one_request(client: httpx.AsyncClient, url: str, body: dict,
                         gaps.append((now - t_last) * 1000.0)
                     t_last = now
                     delta_count += 1
+                    if not content:
+                        reasoning_count += 1
     except Exception as e:                                   # noqa: BLE001
         res.error = f"{type(e).__name__}"
         return res
@@ -485,7 +500,8 @@ async def one_request(client: httpx.AsyncClient, url: str, body: dict,
     t_end = time.perf_counter()
     res.total_ms = (t_end - t0) * 1000.0
     res.end_s = round(t_end - base, 4)
-    res.content_frames = delta_count
+    res.content_frames = delta_count - reasoning_count
+    res.reasoning_frames = reasoning_count
 
     if timings:
         res.server_prompt_n = timings.get("prompt_n")
@@ -495,7 +511,7 @@ async def one_request(client: httpx.AsyncClient, url: str, body: dict,
         res.server_predicted_ms = timings.get("predicted_ms")
 
     if t_first is None:
-        # A completed stream that produced no content is the B3 failure shape
+        # A completed stream that produced no output at all is the B3 failure shape
         # (an unterminated <think> block consuming the whole allowance), and it
         # must not be averaged away as a fast request.
         res.error = "empty_completion"

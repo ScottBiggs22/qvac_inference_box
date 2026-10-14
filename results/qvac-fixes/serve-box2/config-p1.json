@@ -1,0 +1,3 @@
+{ "serve": { "models": { "qwen3-8b": {
+  "model": "QWEN3_8B_INST_Q4_K_M", "default": true, "preload": true,
+  "config": { "ctx_size": 8192, "parallel": 1 } } } } }

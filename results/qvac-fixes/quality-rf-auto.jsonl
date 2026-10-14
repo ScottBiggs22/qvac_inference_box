@@ -1,0 +1,51 @@
+{"kind": "header", "label": "qvac-q4km-rf-auto", "url": "http://127.0.0.1:8000/v1", "timestamp": "2026-10-14T05:29:22Z"}
+{"kind": "case", "id": "arith-0", "family": "answer", "status": 200, "latency_ms": 81.3, "content": "881", "tool_calls": null, "correct": true, "answer": "881"}
+{"kind": "case", "id": "arith-1", "family": "answer", "status": 200, "latency_ms": 63.7, "content": "-739", "tool_calls": null, "correct": true, "answer": "-739"}
+{"kind": "case", "id": "arith-2", "family": "answer", "status": 200, "latency_ms": 78.6, "content": "479688", "tool_calls": null, "correct": false, "answer": "479688"}
+{"kind": "case", "id": "arith-3", "family": "answer", "status": 200, "latency_ms": 57.2, "content": "818", "tool_calls": null, "correct": true, "answer": "818"}
+{"kind": "case", "id": "arith-4", "family": "answer", "status": 200, "latency_ms": 55.6, "content": "356", "tool_calls": null, "correct": true, "answer": "356"}
+{"kind": "case", "id": "arith-5", "family": "answer", "status": 200, "latency_ms": 70.8, "content": "99992", "tool_calls": null, "correct": false, "answer": "99992"}
+{"kind": "case", "id": "arith-6", "family": "answer", "status": 200, "latency_ms": 63.4, "content": "1606", "tool_calls": null, "correct": true, "answer": "1606"}
+{"kind": "case", "id": "arith-7", "family": "answer", "status": 200, "latency_ms": 56.0, "content": "186", "tool_calls": null, "correct": true, "answer": "186"}
+{"kind": "case", "id": "arith-8", "family": "answer", "status": 200, "latency_ms": 77.6, "content": "145000", "tool_calls": null, "correct": true, "answer": "145000"}
+{"kind": "case", "id": "arith-9", "family": "answer", "status": 200, "latency_ms": 63.5, "content": "1399", "tool_calls": null, "correct": true, "answer": "1399"}
+{"kind": "case", "id": "arith-10", "family": "answer", "status": 200, "latency_ms": 55.7, "content": "258", "tool_calls": null, "correct": true, "answer": "258"}
+{"kind": "case", "id": "arith-11", "family": "answer", "status": 200, "latency_ms": 77.6, "content": "792360", "tool_calls": null, "correct": true, "answer": "792360"}
+{"kind": "case", "id": "arith-12", "family": "answer", "status": 200, "latency_ms": 63.7, "content": "1078", "tool_calls": null, "correct": true, "answer": "1078"}
+{"kind": "case", "id": "arith-13", "family": "answer", "status": 200, "latency_ms": 63.2, "content": "-884", "tool_calls": null, "correct": true, "answer": "-884"}
+{"kind": "case", "id": "arith-14", "family": "answer", "status": 200, "latency_ms": 78.1, "content": "649190", "tool_calls": null, "correct": false, "answer": "649190"}
+{"kind": "case", "id": "arith-15", "family": "answer", "status": 200, "latency_ms": 63.5, "content": "1221", "tool_calls": null, "correct": true, "answer": "1221"}
+{"kind": "case", "id": "arith-16", "family": "answer", "status": 200, "latency_ms": 56.0, "content": "-79", "tool_calls": null, "correct": true, "answer": "-79"}
+{"kind": "case", "id": "arith-17", "family": "answer", "status": 200, "latency_ms": 77.7, "content": "215999", "tool_calls": null, "correct": false, "answer": "215999"}
+{"kind": "case", "id": "arith-18", "family": "answer", "status": 200, "latency_ms": 56.3, "content": "633", "tool_calls": null, "correct": true, "answer": "633"}
+{"kind": "case", "id": "arith-19", "family": "answer", "status": 200, "latency_ms": 55.6, "content": "532", "tool_calls": null, "correct": true, "answer": "532"}
+{"kind": "case", "id": "arith-20", "family": "answer", "status": 200, "latency_ms": 70.7, "content": "21120", "tool_calls": null, "correct": false, "answer": "21120"}
+{"kind": "case", "id": "arith-21", "family": "answer", "status": 200, "latency_ms": 52.4, "content": "900", "tool_calls": null, "correct": true, "answer": "900"}
+{"kind": "case", "id": "arith-22", "family": "answer", "status": 200, "latency_ms": 63.0, "content": "-767", "tool_calls": null, "correct": true, "answer": "-767"}
+{"kind": "case", "id": "arith-23", "family": "answer", "status": 200, "latency_ms": 78.1, "content": "730125", "tool_calls": null, "correct": false, "answer": "730125"}
+{"kind": "case", "id": "fixed-0", "family": "answer", "status": 200, "latency_ms": 39.9, "content": "Au", "tool_calls": null, "correct": true, "answer": "Au"}
+{"kind": "case", "id": "fixed-1", "family": "answer", "status": 200, "latency_ms": 39.6, "content": "6", "tool_calls": null, "correct": true, "answer": "6"}
+{"kind": "case", "id": "fixed-2", "family": "answer", "status": 200, "latency_ms": 47.8, "content": "Tokyo", "tool_calls": null, "correct": true, "answer": "Tokyo"}
+{"kind": "case", "id": "fixed-3", "family": "answer", "status": 200, "latency_ms": 48.2, "content": "Mercury", "tool_calls": null, "correct": true, "answer": "Mercury"}
+{"kind": "case", "id": "fixed-4", "family": "answer", "status": 200, "latency_ms": 65.8, "content": "1024", "tool_calls": null, "correct": true, "answer": "1024"}
+{"kind": "case", "id": "fixed-5", "family": "answer", "status": 200, "latency_ms": 53.8, "content": "Yes.", "tool_calls": null, "correct": true, "answer": "Yes"}
+{"kind": "case", "id": "fixed-6", "family": "answer", "status": 200, "latency_ms": 48.3, "content": "redgel", "tool_calls": null, "correct": false, "answer": "redgel"}
+{"kind": "case", "id": "fixed-7", "family": "answer", "status": 200, "latency_ms": 56.6, "content": "210", "tool_calls": null, "correct": true, "answer": "210"}
+{"kind": "case", "id": "fixed-8", "family": "answer", "status": 200, "latency_ms": 48.7, "content": "47", "tool_calls": null, "correct": true, "answer": "47"}
+{"kind": "case", "id": "fixed-9", "family": "answer", "status": 200, "latency_ms": 90.0, "content": "2,4,7,9", "tool_calls": null, "correct": true, "answer": "2,4,7,9"}
+{"kind": "case", "id": "fixed-10", "family": "answer", "status": 200, "latency_ms": 61.3, "content": "850", "tool_calls": null, "correct": false, "answer": "850"}
+{"kind": "case", "id": "fixed-11", "family": "answer", "status": 200, "latency_ms": 40.7, "content": "12", "tool_calls": null, "correct": true, "answer": "12"}
+{"kind": "case", "id": "fixed-12", "family": "answer", "status": 200, "latency_ms": 48.0, "content": "366", "tool_calls": null, "correct": true, "answer": "366"}
+{"kind": "case", "id": "fixed-13", "family": "answer", "status": 200, "latency_ms": 49.3, "content": "25%", "tool_calls": null, "correct": true, "answer": "25%"}
+{"kind": "case", "id": "fixed-14", "family": "answer", "status": 200, "latency_ms": 51.2, "content": "48", "tool_calls": null, "correct": true, "answer": "48"}
+{"kind": "case", "id": "fixed-15", "family": "answer", "status": 200, "latency_ms": 48.4, "content": "gracias", "tool_calls": null, "correct": true, "answer": "gracias"}
+{"kind": "case", "id": "json-0", "family": "json", "status": 200, "latency_ms": 436.0, "content": "{\n  \"account_id\": \"ACC-1001\",\n  \"amount\": 250.75,\n  \"currency\": \"USD\",\n  \"direction\": \"debit\"\n}", "tool_calls": null, "correct": true, "parses": true, "schema_ok": true}
+{"kind": "case", "id": "json-1", "family": "json", "status": 200, "latency_ms": 390.9, "content": "{\n  \"account_id\": \"ZX-77\",\n  \"amount\": 1000,\n  \"currency\": \"EUR\",\n  \"direction\": \"credit\"\n}", "tool_calls": null, "correct": true, "parses": true, "schema_ok": true}
+{"kind": "case", "id": "json-2", "family": "json", "status": 200, "latency_ms": 375.1, "content": "{\n  \"account_id\": \"Q9\",\n  \"amount\": 12,\n  \"currency\": \"GBP\",\n  \"direction\": \"debit\"\n}", "tool_calls": null, "correct": true, "parses": true, "schema_ok": true}
+{"kind": "case", "id": "json-3", "family": "json", "status": 200, "latency_ms": 390.0, "content": "{\n  \"account_id\": \"LM-3\",\n  \"amount\": 75.5,\n  \"currency\": \"CHF\",\n  \"direction\": \"credit\"\n}", "tool_calls": null, "correct": true, "parses": true, "schema_ok": true}
+{"kind": "case", "id": "json-4", "family": "json", "status": 200, "latency_ms": 400.2, "content": "{\n  \"account_id\": \"RT-42\",\n  \"amount\": 3000,\n  \"currency\": \"JPY\",\n  \"direction\": \"debit\"\n}", "tool_calls": null, "correct": true, "parses": true, "schema_ok": true}
+{"kind": "case", "id": "tool-0", "family": "tool", "status": 200, "latency_ms": 276.7, "content": "", "tool_calls": [{"type": "function", "function": {"name": "get_balance", "arguments": "{\"account_id\": \"ACC-1001\"}"}, "id": "f6FL4EYFh4pDKSe0Hkrit7Xt67aMAujQ"}], "correct": true, "tool_called": true, "name": "get_balance", "args_parse": true}
+{"kind": "case", "id": "tool-1", "family": "tool", "status": 200, "latency_ms": 292.6, "content": "", "tool_calls": [{"type": "function", "function": {"name": "convert_currency", "arguments": "{\"amount\": 100, \"from\": \"USD\", \"to\": \"EUR\"}"}, "id": "WgrtXXP04QbbI3vY9h5Z1DId20NQPfcd"}], "correct": true, "tool_called": true, "name": "convert_currency", "args_parse": true}
+{"kind": "case", "id": "tool-2", "family": "tool", "status": 200, "latency_ms": 216.2, "content": "", "tool_calls": [{"type": "function", "function": {"name": "get_balance", "arguments": "{\"account_id\": \"ZX-77\"}"}, "id": "3hu2NxbhCY2PTEKa2Y1emjqm0ihk0eoy"}], "correct": true, "tool_called": true, "name": "get_balance", "args_parse": true}
+{"kind": "case", "id": "tool-3", "family": "tool", "status": 200, "latency_ms": 308.1, "content": "", "tool_calls": [{"type": "function", "function": {"name": "convert_currency", "arguments": "{\"amount\": 2500, \"from\": \"JPY\", \"to\": \"GBP\"}"}, "id": "9i8d20S5HW9FJsQ1gfu49Razs7lJZPYY"}], "correct": true, "tool_called": true, "name": "convert_currency", "args_parse": true}
+{"kind": "case", "id": "tool-4", "family": "tool", "status": 200, "latency_ms": 209.1, "content": "", "tool_calls": [{"type": "function", "function": {"name": "get_balance", "arguments": "{\"account_id\": \"LM-3\"}"}, "id": "urDr61ElTMpH74AQvM62bWKNvquvQqGS"}], "correct": true, "tool_called": true, "name": "get_balance", "args_parse": true}
