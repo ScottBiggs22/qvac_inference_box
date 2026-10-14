@@ -1,6 +1,10 @@
 # Launch prompt — first real QVAC Fabric session on a rented A10
 
 **Written:** 2026-09-30
+
+> **Historical.** Several premises below turned out wrong: there is no `--openai`
+> flag, and `/health`, `/metrics` and continuous batching all exist. See
+> `docs/QVAC_FORK.md`.
 **Purpose:** get QVAC Fabric actually running on a rented vast.ai A10 (24 GiB)
 and work through `docs/QVAC_FORK.md`'s verification checklist, the same way
 `bkn301-inference`'s Phase 1 session did for vLLM.

@@ -127,9 +127,10 @@ class Settings(BaseSettings):
     # hop). All three empty by default so Phase 1's plain-HTTP stub keeps
     # working unmodified -- these only take effect for an https:// UPSTREAM_URLS
     # entry; httpx's TLS config is inert on a plain http:// connection. QVAC
-    # Fabric documents no TLS support of its own (docs/QVAC_FORK.md) -- whether
-    # this wiring ends up terminating at QVAC directly or at a sidecar in front
-    # of it is unverified; see that doc's checklist.
+    # Fabric's llama-server has server-side TLS flags but no client-CA option,
+    # so engine-side mTLS needs a sidecar in front of it (design only:
+    # docs/QVAC_FORK.md item 6) -- the same gateway-side-only posture as
+    # bkn301-inference.
     #
     # Paths, not inline PEM: the platform injects secrets as files (a mounted
     # Secret volume) or as env vars, and a private key is the one setting here

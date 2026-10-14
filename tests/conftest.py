@@ -148,10 +148,9 @@ def live_stub():
             if proc.poll() is not None:
                 raise RuntimeError(f"stub exited early with {proc.returncode}")
             try:
-                # QVAC Fabric has no /health endpoint (docs/QVAC_FORK.md), so
-                # this polls the same /v1/models path the gateway's own
-                # UpstreamPool.health()/.probe() use -- the stub's contract
-                # should be exactly what production actually offers.
+                # Polls the same /v1/models path the gateway's own
+                # UpstreamPool.health()/.probe() use. (llama-server also has an
+                # unauthenticated /health; the gateway does not use it yet.)
                 if httpx.get(f"{base}/v1/models", timeout=0.5).status_code == 200:
                     return base
             except Exception:  # noqa: BLE001 - still booting

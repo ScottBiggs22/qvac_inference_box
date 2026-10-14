@@ -32,19 +32,25 @@ env-var surface, `_upstream_ssl_context`'s own docstring for why the TLS
 context is built by hand rather than through httpx's `cert=`/`verify=<str>`
 params, and PRD §4.8 for why this is scoped to code + config + a self-signed-
 cert test rather than something validated on a laptop: the security review has
-to run against the real deployment path. **QVAC Fabric documents no TLS/mTLS
-support of its own** (docs/QVAC_FORK.md) -- this wiring is exercised against
-whatever terminates TLS in front of it, which may need to be a sidecar rather
-than QVAC itself; that is an open, unverified question, not a settled one.
+to run against the real deployment path. QVAC Fabric's `llama-server` has
+server-side TLS flags (`--ssl-key-file`/`--ssl-cert-file`) but the stock build
+has no OpenSSL, and there is no client-CA option at all, so it cannot verify a
+client certificate. Engine-side mTLS therefore needs a sidecar in front of it
+(design only: docs/QVAC_FORK.md item 6). This is the same posture as
+bkn301-inference: the wiring here is gateway-side only.
 
-WEDGE DETECTION HAS NO METRICS ENDPOINT TO LEAN ON
-===================================================
+WEDGE DETECTION DOES NOT SCRAPE THE UPSTREAM
+============================================
 vLLM exposed its own `/metrics`; a separate scraper (deleted --
 `gateway/upstream/metrics_scraper.py` under bkn301-inference) polled it on a
-timer to derive the wedge signature. QVAC Fabric documents no metrics endpoint
-at all, so `_send_and_record` below instead reports every dispatch and every
-settlement to `gateway.upstream.wedge.wedge_monitor` directly -- see that
-module's docstring for the derived signal and its honest limits.
+timer to derive the wedge signature. This repo was written when QVAC Fabric was
+believed to have no metrics endpoint, so `_send_and_record` below instead
+reports every dispatch and every settlement to
+`gateway.upstream.wedge.wedge_monitor` directly -- see that module's docstring
+for the derived signal and its honest limits. CORRECTION (measured, see
+docs/PHASE1_RESULTS_QVAC.md): `llama-server` does serve an unauthenticated
+`/health` and, with `--metrics`, a Prometheus `/metrics`. Scraping them is an
+option this design has not taken up yet.
 """
 from __future__ import annotations
 

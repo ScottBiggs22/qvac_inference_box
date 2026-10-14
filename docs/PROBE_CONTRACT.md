@@ -10,12 +10,21 @@
 > written against vLLM and is kept because most of the *reasoning* (§1, §3,
 > most of §6) is engine-agnostic and still applies. What does NOT carry over
 > unchanged: every endpoint name (vLLM's `/health` → QVAC Fabric's
-> `/v1/models`, since QVAC documents no health endpoint of any kind) and
+> `/v1/models`, on the then-belief that QVAC had no health endpoint — see the
+> correction below) and
 > every measured timing number (§5) — those were real measurements of vLLM on
 > a real A10, and QVAC Fabric has no equivalent measurement yet. §4's
 > real-freeze account is kept in full because it is the direct reason
 > `gateway/upstream/wedge.py` exists as a dispatch-bookkeeping mechanism
 > rather than a metrics scrape — see the note inserted there.
+
+> **CORRECTION (2026-10, measured — `docs/PHASE1_RESULTS_QVAC.md`,
+> `docs/HEAD_TO_HEAD.md` §9).** QVAC Fabric's `llama-server` **does** serve an
+> unauthenticated `/health` and, with `--metrics`, a Prometheus `/metrics`.
+> `deploy/k8s/probes.yaml` now probes `/health` with measured timings; it is the
+> source of truth where it disagrees with §2's table below. Its parallelism is
+> llama.cpp slots (`-np`) with continuous batching, not `qvac serve`'s FCFS
+> `config.parallel` queue.
 
 ---
 
@@ -42,7 +51,7 @@ another full model reload, and a restart loop costs the service.
 
 | Probe | Endpoint | Checks | Timings | Why |
 |---|---|---|---|---|
-| `startupProbe` | `/v1/models` (was vLLM's `/health`; QVAC Fabric has no `/health` — docs/QVAC_FORK.md) | Engine initialised, assumed | `periodSeconds: 5`, `failureThreshold: 60` → **300s budget, UNVERIFIED for QVAC** | vLLM returned 200 here only once the engine was up — whether QVAC's `/v1/models` has the same "not ready until loaded" property is unconfirmed. **While this runs, Kubernetes suppresses the other two** — which is what makes them safe to tune tightly, if the timing is right. **vLLM's number was measured 2026-09-10, see §5; QVAC Fabric's is not.** |
+| `startupProbe` | `/v1/models` (was vLLM's `/health`; superseded — `probes.yaml` now uses QVAC's own `/health`, see the correction above) | Engine initialised, assumed | `periodSeconds: 5`, `failureThreshold: 60` → **300s budget, UNVERIFIED for QVAC** | vLLM returned 200 here only once the engine was up — whether QVAC's `/v1/models` has the same "not ready until loaded" property is unconfirmed. **While this runs, Kubernetes suppresses the other two** — which is what makes them safe to tune tightly, if the timing is right. **vLLM's number was measured 2026-09-10, see §5; QVAC Fabric's is not.** |
 | `readinessProbe` | `/v1/models` | Engine health **only** | `periodSeconds: 10`, `failureThreshold: 2` | Answers "is this instance broken", never "is it busy". See §3 — this reasoning is engine-agnostic and matters MORE under QVAC's FCFS `config.parallel: N` queueing, where "busy" is more common than it was under vLLM's continuous batching. |
 | `livenessProbe` | `/v1/models` | Engine loop alive, assumed. **Never a test generation.** | `periodSeconds: 20`, `timeoutSeconds: 5`, `failureThreshold: 3` → ~60s | Restart costs an unmeasured reload time (30–60s was vLLM's), so this is the last resort. |
 
@@ -75,8 +84,9 @@ queue without removing anything from service discovery.
 > **THIS SECTION IS HISTORICAL — read it for the real-freeze findings, not
 > for the mechanism.** Everything below describes vLLM's `/metrics`-based
 > detector, which `gateway/upstream/metrics_scraper.py` implemented and which
-> this fork has **deleted**: QVAC Fabric exposes no metrics endpoint at all,
-> so there is nothing to scrape. `gateway/upstream/wedge.py` replaces it with
+> this fork has **deleted**, on the then-belief that QVAC Fabric exposed no
+> metrics endpoint. (Corrected: `--metrics` serves Prometheus `/metrics`;
+> scraping it is not wired up.) `gateway/upstream/wedge.py` replaces it with
 > a signal derived from the gateway's own dispatch/settlement bookkeeping
 > instead — see that module's docstring. The finding below (§4's corrected
 > account, confirmed 2026-09-15) is the direct reason that replacement is

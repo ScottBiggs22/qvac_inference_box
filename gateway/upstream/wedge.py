@@ -5,8 +5,10 @@ WHY THIS EXISTS INSTEAD OF SCRAPING THE UPSTREAM'S OWN METRICS
 vLLM exposed a `/metrics` endpoint whose `num_requests_waiting` /
 `generation_tokens_total` pair let `gateway/upstream/metrics_scraper.py` (now
 deleted) tell "wedged" (API server up, engine loop frozen) apart from "idle".
-QVAC Fabric's HTTP server documents no metrics endpoint, and no health endpoint
-either -- there is nothing upstream to scrape. So this module derives the same
+This was written when QVAC Fabric was believed to have no metrics or health
+endpoint. CORRECTION (measured, docs/PHASE1_RESULTS_QVAC.md): `llama-server`
+serves `/health` and, with `--metrics`, a Prometheus `/metrics`; scraping them
+is not yet wired up. This module derives the same
 signal from data the gateway already has: the age of the oldest chat-completion
 attempt it is currently waiting on against a given replica, and whether any
 attempt against that replica has settled since.

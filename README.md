@@ -55,7 +55,7 @@ bound — it does not need a GPU. QVAC Fabric is the GPU-bound piece it fronts.
 | `gateway/routes/health.py`, `models.py`, `metrics.py` | `/healthz`, `/readyz`, `/v1/models`, `/metrics`. |
 | `gateway/upstream/client.py` | Replica pool, shared `httpx.AsyncClient`, streaming passthrough, bounded retries with jitter, mTLS wiring. |
 | `gateway/upstream/breaker.py` | Per-replica circuit breaker (weighted consecutive-failure score, not a rate). |
-| `gateway/upstream/wedge.py` | Derives a "wedge" (frozen-engine) signal from the gateway's own dispatch/settlement bookkeeping — QVAC Fabric exposes no `/metrics` to scrape the way vLLM did; see `docs/QVAC_FORK.md`. |
+| `gateway/upstream/wedge.py` | Derives a "wedge" (frozen-engine) signal from the gateway's own dispatch/settlement bookkeeping — written when QVAC Fabric was believed to have no `/metrics`; it has one (`--metrics`), not yet scraped. |
 | `gateway/quota.py` | Token-budget and in-flight-concurrency enforcement, wired into `chat.py`. |
 | `gateway/audit.py` | Metadata-only audit log writer — never prompt/completion text. |
 | `gateway/metrics.py` | Prometheus metric definitions + ASGI middleware. |
@@ -183,6 +183,8 @@ Measured on a rented A10 on 2026-10-02/03, the same box as vLLM. The full compar
 - **Headline:** at 8 concurrent users, exact 7000+512, cached prompt, QVAC Q4_K_M
   holds **20.0 tok/s/user against vLLM's 43.2** on the same card, at about 2× the cost
   per token. With an uncached prompt it **fails R1** (about 16 tok/s/user at 5 users).
+  The bar is 43.2, not the older "~48 tok/s/user at 8": that figure came from a loadgen
+  that actually sent ~5.3k-token prompts (`HEAD_TO_HEAD.md` §1, §4).
   It starts in 1.5–3 s (vLLM takes 41–90 s).
 - Image/tag: still not pinned, because no prebuilt CUDA image exists. The measured
   binary was built from `tetherto/qvac-fabric-llm.cpp` @ `7bb2161c690b…` with
@@ -245,17 +247,17 @@ as env vars or mounted files the env vars point at:
 | `UPSTREAM_API_KEY` | The upstream's static shared secret (QVAC Fabric's `--api-key`) — private-subnet-only, never leaves it |
 | `API_KEY_PEPPER` | Argon2id pepper, generated per environment, never committed, never stored beside the key store |
 | `JWT_PUBLIC_KEY` | The issuing API's asymmetric signing public key (RS256) — the gateway must never hold a private or symmetric key |
-| `UPSTREAM_CLIENT_CERT_PATH` / `UPSTREAM_CLIENT_KEY_PATH` / `UPSTREAM_CA_BUNDLE_PATH` | mTLS material for gateway→upstream — sourced from whatever CA issues certs on the private subnet. **QVAC Fabric documents no TLS/mTLS support of its own** — whether this terminates at QVAC directly or at a sidecar in front of it is unresolved, `docs/QVAC_FORK.md` checklist item 6 |
+| `UPSTREAM_CLIENT_CERT_PATH` / `UPSTREAM_CLIENT_KEY_PATH` / `UPSTREAM_CA_BUNDLE_PATH` | mTLS material for gateway→upstream — sourced from whatever CA issues certs on the private subnet. Gateway-side wiring only, same as `bkn301-inference`. QVAC's `llama-server` has server-side TLS flags (stock build lacks OpenSSL) but no client-CA option, so engine-side mTLS needs a sidecar — design only, `docs/QVAC_FORK.md` item 6 |
 | `API_KEY_STORE_PATH` | Writable path for the per-environment API key registry (generated, not committed) |
 | `AUDIT_LOG_PATH` | Writable/persisted path for the metadata-only audit log |
 
 ### Observability to wire up
 
 - Prometheus scrape target: the gateway's own `/metrics` (behind a network
-  policy). **There is no upstream `/metrics` to also scrape** — QVAC Fabric
-  documents no metrics endpoint at all, unlike vLLM. The wedge signal is
-  derived entirely from the gateway's own dispatch/settlement bookkeeping
-  (`gateway/upstream/wedge.py`), not from anything scraped off the upstream.
+  policy). QVAC Fabric's `llama-server` also serves a Prometheus `/metrics`
+  (`--metrics`, set in `probes.yaml`) that can be scraped like vLLM's was.
+  The wedge signal, though, is still derived from the gateway's own
+  dispatch/settlement bookkeeping (`gateway/upstream/wedge.py`), not scraped.
 - Alerts worth having from day one: tok/s/user below target, TTFT p95,
   circuit-breaker trips, and `bkn301_gateway_upstream_wedge_stall_seconds`
   crossing its (currently estimated, not measured) window. (KV-cache
@@ -338,7 +340,7 @@ targets and asserts the image-hygiene properties above.
 | `test_breaker_routing.py` | Breaker as the router sees it over a real socket: all-replicas-open fails fast (not a 120s hang), `/readyz` behavior, half-open recovery. |
 | `test_retries.py` | Bounded retries with jitter on 429/502/503/504 — connect errors retried, read timeouts never retried, `Retry-After` handling, `MAX_ATTEMPTS == 2`. |
 | `test_metrics.py` | `/metrics` endpoint format, cardinality bounds, request instrumentation. |
-| `test_wedge.py` | Wedge-signal state machine (pure, clock-injected) plus a live-stub integration test proving the real dispatch path produces the signature — QVAC Fabric has no `/metrics` to scrape, so this replaces `bkn301-inference`'s `test_upstream_metrics.py`. |
+| `test_wedge.py` | Wedge-signal state machine (pure, clock-injected) plus a live-stub integration test proving the real dispatch path produces the signature — replaces `bkn301-inference`'s `test_upstream_metrics.py` (written when QVAC was believed to have no `/metrics`; it has one, not yet scraped). |
 | `test_qvac_quirks.py` | QVAC-documented behaviors the stub fakes: `context_length_exceeded` at a configured ctx_size, vision content silently dropped from chat. |
 | `test_mtls.py` | Gateway→upstream mTLS wiring: rejects missing/wrong-CA client certs, succeeds with a correct chain, fails closed if not configured. |
 | `test_quota.py` | Per-key token budgets and concurrency caps, including that a streamed response holds its concurrency slot for the life of the stream. |

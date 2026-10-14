@@ -25,22 +25,39 @@ through it. That single fact is why this fork is mostly a matter of finding
 the handful of places that assumed something *specifically* about vLLM,
 rather than a rewrite of the gateway itself.
 
-## What QVAC Fabric's HTTP server actually offers (as documented — none of this
-## is yet verified against a live server; see the checklist below)
+## What QVAC Fabric's HTTP server actually offers
 
-Launched with `--openai`, it exposes a genuinely OpenAI-compatible surface:
+**Measured** (`docs/PHASE1_RESULTS_QVAC.md`, `docs/HEAD_TO_HEAD.md`,
+`docs/QVAC_FIXES_RESULTS.md`): the fork's `llama-server` exposes
+`POST /v1/chat/completions` (SSE and non-streaming) and `GET /v1/models` with no
+extra flag, and also an unauthenticated `/health`. Passing `--metrics` adds a
+Prometheus `/metrics`. Concurrency is llama.cpp slots (`-np N`) with continuous
+batching on by default. `-c` is the **total** context across slots, and its default
+is the model's own context, not 1024. Tool calls work. `response_format`: see
+`docs/QVAC_FIXES_RESULTS.md`. TLS: `--ssl-key-file/--ssl-cert-file` exist, but the
+stock CUDA build has no OpenSSL. There is no client-certificate (mTLS) option at
+all; see item 6.
+
+`config.parallel` (FCFS, default 1), `~/.qvac/kv-cache` and `--openai` belong to a
+**different** server: `qvac serve --openai` from npm `@qvac/cli`, a Node wrapper
+around `@qvac/sdk`. That is not what this repo deploys.
+
+<details><summary>Original (pre-measurement) claims, kept for the record</summary>
+
+~~Launched with `--openai`, it exposes a genuinely OpenAI-compatible surface:
 `POST /v1/chat/completions`, `/v1/completions`, `/v1/embeddings`,
 `GET /v1/models`, SSE streaming, `response_format` JSON-schema support, tool
 calling. Concurrency is `config.parallel: N` fixed decode slots served FCFS —
 **not** vLLM's dynamic continuous batching / PagedAttention. Default context
 window is a documented **1024 tokens** (the PRD requires 8k). It documents
-**no `/health`, no `/metrics`, and no TLS/mTLS support of any kind.**
+no health endpoint, no metrics endpoint, and no TLS/mTLS support of any kind.~~
+</details>
 
 ## What changed vs. `bkn301-inference`
 
 | Area | Disposition |
 |---|---|
-| `gateway/upstream/metrics_scraper.py` | **Deleted.** Scraped vLLM's proprietary `/metrics` Prometheus series to derive the wedge signal. QVAC exposes no metrics endpoint at all — nothing to scrape. |
+| `gateway/upstream/metrics_scraper.py` | **Deleted.** Scraped vLLM's proprietary `/metrics` Prometheus series to derive the wedge signal. (At fork time QVAC was believed to have no metrics endpoint; corrected: `--metrics` exists, not yet scraped.) |
 | `gateway/upstream/wedge.py` | **New**, replaces it. Derives the same wedge signature from the gateway's own dispatch/settlement bookkeeping (`UpstreamPool._send_and_record` now reports every attempt) instead of polling the upstream. Consumed by `gateway/upstream/breaker.py`'s `record_wedge()` with **zero changes to breaker.py** — that method already took an abstract boolean and never knew its old producer was vLLM-specific. |
 | `gateway/main.py`'s `_scrape_loop` | **Deleted outright**, not replaced by an equivalent timer. The new signal is event-driven (updated on every dispatch/settle), so `_breaker_prober`'s existing tick just reads it — one fewer background task than vLLM had. |
 | `gateway/metrics.py` | `upstream_up`, `upstream_scrape_age_seconds`, `upstream_scrape_failures_total` gauges deleted (nothing left to describe a scrape that doesn't happen). `upstream_wedge_suspected`/`upstream_wedge_stall_seconds` kept — same names, new producer. |
@@ -52,15 +69,18 @@ window is a documented **1024 tokens** (the PRD requires 8k). It documents
 
 ## What's degraded, and why it's expected
 
-- **No continuous batching.** QVAC's FCFS `config.parallel: N` slots are a
-  fundamentally different concurrency model from vLLM's dynamic, memory-shared
-  batching. Expect a materially lower concurrent-user ceiling per GPU.
-- **No documented health/metrics endpoint of any kind.** The wedge-detection
+- ~~**No continuous batching.**~~ *Corrected:* llama-server batches continuously
+  across `-np` slots, but each slot has a fixed KV reservation and no cross-slot
+  prefix sharing. The measured per-GPU ceiling is still materially lower than
+  vLLM's (`HEAD_TO_HEAD.md`).
+- ~~**No documented health/metrics endpoint of any kind.**~~ *Corrected:* `/health`
+  and `--metrics` exist; the gateway does not use them yet. The wedge-detection
   redesign (`gateway/upstream/wedge.py`) is honestly scoped: it can only catch
   a wedge that has **real traffic against it**. An idle engine that wedges with
   nobody calling it is invisible until a periodic synthetic probe is built —
   deliberately not done in this pass (see checklist item 9).
-- **No TLS/mTLS at the engine layer.** `gateway/upstream/client.py`'s mTLS
+- **No mTLS at the engine layer** (server-side TLS flags exist; no client-CA
+  option, stock build has no OpenSSL). `gateway/upstream/client.py`'s mTLS
   wiring is unchanged and still works against *something* — deferred (plain
   HTTP) for the initial vast.ai test, matching `bkn301-inference`'s own
   precedent; a sidecar in front of QVAC is the live option before any real
@@ -180,6 +200,27 @@ number as real).
       documented CUDA build has no SSL: the server exits with `the server is built
       without SSL support`. There is no client-certificate option at all, so mTLS
       still needs the sidecar.
+      **Decision 2026-10-13: match the sister repo.** Gateway-side wiring only
+      (`UPSTREAM_CLIENT_CERT_PATH/KEY_PATH/CA_BUNDLE_PATH`,
+      `_upstream_ssl_context()`, `tests/test_mtls.py`). This code is identical to
+      `bkn301-inference`'s, and like there it has never been run against a live
+      engine. **Sidecar design (unbuilt, design only):**
+      - A TLS terminator (nginx or envoy) in the QVAC pod listens on a private
+        port with `ssl_verify_client on` and `ssl_client_certificate <private CA>`.
+        It proxies to `llama-server` bound to `127.0.0.1:8000`, so the engine is
+        never reachable off-pod in plaintext.
+      - SSE needs `proxy_buffering off`, `proxy_http_version 1.1` and a
+        `proxy_read_timeout` at or above the gateway's `UPSTREAM_READ_TIMEOUT_SEC`
+        (120 s). Otherwise streams are buffered or cut.
+      - kubelet probes cannot present a client cert. Probe `/health` on a plain
+        side port that serves only `/health`, or use an `exec` probe hitting
+        loopback. `/health` is unauthenticated and carries no prompt data.
+      - The server cert/key and CA bundle are a mounted Secret, and rotation is
+        left to DevOps, exactly as the sister leaves it. The PRD §4.8 security
+        review has to run against this real deployment path.
+      - Alternative, also unbuilt: patch the fork to call
+        `SSLServer(cert, key, client_ca)` (cpp-httplib supports it) and build with
+        `-DLLAMA_OPENSSL=ON`. That is more invasive and adds a fork delta to carry.
 - [x] **7. k8s probe auth-header mechanics.** **Resolved:** `/health` needs no
       auth (measured), and `/v1/models`, `/metrics` and `/slots` return 401 without
       the key. probes.yaml now probes `/health`, so no probe token is needed.

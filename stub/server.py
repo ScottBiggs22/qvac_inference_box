@@ -12,13 +12,13 @@ deterministically:
     GET  /v1/models
     POST /v1/chat/completions   (streaming and non-streaming)
 
-Notably absent, and deliberately so: `/health` and `/metrics`. QVAC Fabric's
-HTTP server documents neither (docs/QVAC_FORK.md) -- there is nothing upstream
-to scrape or probe beyond the OpenAI surface itself, which is exactly why
-`gateway/upstream/client.py`'s readiness checks already hit `/v1/models` and
-`gateway/upstream/wedge.py` derives its signal from dispatch bookkeeping rather
-than a scrape. Emulating endpoints the real server doesn't have would test
-nothing real.
+Not emulated: `/health` and `/metrics`. This stub was written when QVAC Fabric
+was believed to have neither. CORRECTION (measured, docs/PHASE1_RESULTS_QVAC.md):
+`llama-server` serves an unauthenticated `/health` and, with `--metrics`, a
+Prometheus `/metrics`. The gateway does not use either yet --
+`gateway/upstream/client.py`'s readiness checks hit `/v1/models` and
+`gateway/upstream/wedge.py` derives its signal from dispatch bookkeeping -- so
+the stub still serves only the surface the gateway touches.
 
 DETERMINISTIC BY DESIGN
 =======================
