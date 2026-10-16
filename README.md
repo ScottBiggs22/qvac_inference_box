@@ -22,6 +22,11 @@ The gateway is consumed by a fintech platform ("FirstData")'s C#/.NET API
 `qvac`. It handles investor/KYC-adjacent data, which is why the security and
 audit posture below is stricter than a typical internal proxy.
 
+**Security:** what this box does and doesn't protect — and the gaps DevOps
+needs to close — is in [`docs/SECURITY.md`](docs/SECURITY.md). A one-page
+version covering both this box and the vLLM box is
+[`docs/SECURITY_DEVOPS_SUMMARY.md`](docs/SECURITY_DEVOPS_SUMMARY.md).
+
 This doc is the onboarding entry point for DevOps and new developers. For
 design rationale and full history, see [Where to go deeper](#where-to-go-deeper).
 
@@ -389,6 +394,8 @@ status.
 | Doc | What it is |
 |---|---|
 | `docs/QVAC_FORK.md` | **Read this first.** Why this fork exists, what changed vs. `bkn301-inference`, what's degraded, and the open verification checklist. |
+| `docs/SECURITY.md` | Security features, behavior and known gaps for this box (TLS/mTLS, auth, network, secrets, logging, limits), with a prioritized DevOps action list. |
+| `docs/SECURITY_DEVOPS_SUMMARY.md` | One-page security summary covering both this box and the vLLM box (`bkn301-inference`), written to hand to DevOps. |
 | `docs/QVAC_FABRIC_LAUNCH_PROMPT.md` | Paste-ready prompt for the first real QVAC Fabric session on a rented A10 — working the verification checklist on real hardware. |
 | `docs/HANDOFF.md` | Session history and current state — read next if picking this up cold. |
 | `docs/INFERENCE_SERVICE_PRD.md` | Design source of truth: requirements, stack feasibility, deployment contract, security design, phased plan. |
