@@ -1,0 +1,5 @@
+STEP fix: vllm quality with tool flags 18:56:29
+STEP fix: vllm warm boots x3 (caches warm now) 18:57:59
+STEP fix: qvac boot repeats x3 19:01:42
+STEP PARITYFIX_DONE 19:02:25
+PARITYFIX_EXIT

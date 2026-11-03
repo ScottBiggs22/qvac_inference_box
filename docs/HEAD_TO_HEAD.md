@@ -6,6 +6,9 @@
 > actually served Q4_K_M because of a harness bug (§13). Its data are quarantined in
 > `results/head-to-head-a10/qvac-q8-INVALID-served-q4km/` and must not be quoted.
 >
+> **Addendum (2026-11-02, interim): Tesla T4 data is in §16.** Same harness and suites on one
+> 16 GB T4 (vast.ai), still being collected. Everything above is A10 only.
+>
 > Raw data: `results/head-to-head-a10/` (main box) and
 > `results/head-to-head-a10-rerun/` (Q8_0 box). Regenerate tables with
 > `.venv/bin/python scripts/h2h_report.py <dir>`.
@@ -660,3 +663,134 @@ Where QVAC is better: start-up (1.5–3 s vs 41–90 s), SIGTERM exit, restart t
 | Teardown | both destroyed; instances and volumes `[]`; both throwaway SSH keys deleted from the account and locally; throwaway API keys redacted from all pulled logs |
 | Spent | **$3.01** (credit 4.40 → 1.39) |
 | Lost to harness bugs | ~$0.15 (boot-timer regex wait, idle gap after the vLLM matrix, wrong-revision boot) |
+
+## 16. Tesla T4 (interim addendum, collected 2026-10-30 to 11-02)
+
+**Every number in this section is from one Tesla T4 (15,360 MiB, Turing sm_75, fp16 only), not the A10.**
+Same engines, flags and suites as §6 (QVAC `-cram 0`, vLLM AWQ `--dtype half`). The T4 runs are
+**single runs**, good to roughly ±15%, so do not read small differences as trends. Provenance:
+`results/head-to-head-t4/box_provenance.txt` (driver 595.71.05, CUDA 13.2, vLLM 0.28.0, QVAC build 9240 @ 7bb2161).
+Rented box (Pennsylvania); re-confirm on the real ACA T4 host. Full T4 write-up: `docs/T4_RESULTS.md`. See `docs/T4_HANDOFF.md`.
+
+### 16.1 Fit: does one T4 hold it?
+
+Yes. Everything loads (`results/head-to-head-t4/sweep.jsonl`).
+
+| Config | VRAM after load | Notes |
+|---|---|---|
+| QVAC 8 slots x 8k, f16 KV | 13,903 MiB | about 1.4 GiB spare; the A10 figure was 14,051 |
+| QVAC 5 slots x 8k, f16 KV | 10,447 MiB | the ACA shape |
+| QVAC 12 slots x 4k, f16 KV | 11,595 MiB | |
+| QVAC q8_0 KV | 2-4 GiB below f16 | per config |
+| vLLM 8k, 0.90 util | 14,231 MiB | 50,912 KV tokens (6.2x one 8k sequence) |
+| vLLM 8k, 0.85 util | 12,431 MiB | 38,288 KV tokens (4.7x), cannot hold five 8k sequences |
+
+### 16.2 Per-user decode, A10 vs T4 (warm, 7000+512, single runs on T4; tok/s p50)
+
+| Config | 1 user | 5 users | 8 users |
+|---|---|---|---|
+| A10 QVAC `-cram 0` | 69.6 | 26.5 | 20.0 |
+| **T4** QVAC `-cram 0`, 8 slots | 32.1 (0.46x) | 11.6 (0.44x) | 7.9 (0.39x) |
+| A10 vLLM AWQ | 68.7 | 45.9 | 43.2 |
+| **T4** vLLM AWQ, 0.90 util | 18.9 (0.27x) | 7.0 (0.15x) | 4.7 (0.11x) |
+
+The A10 ordering flips. At 7000 tokens on the T4 QVAC is about 1.7x faster per user than vLLM at every level (1, 5 and 8 users). **That ordering holds only for long prompts; see 16.3.** vLLM's log shows
+`MarlinLinearKernel` (so the AWQ kernel does run on sm_75) with the **`TRITON_ATTN`** backend and Triton JIT stalls at
+run time, so the attention path is the likely cause. Section 16.5 tests the alternative backend: it does not help.
+
+Cold prefill (7000 tokens, TTFT p50 at 1 user): QVAC 7.8 s, vLLM 23.6 s (A10: 2.6 s and 2.0 s).
+vLLM cold TTFT at 8 users is 83.8 s p50 on the T4 (A10 4.7 s). Aggregate warm plateau: QVAC about 62 tok/s (A10 159), vLLM about 37 (A10 340).
+
+Cache behaviour matches the A10: QVAC's per-slot cache hits 1/N across slots (50 / 25 / 13% at 2 / 4 / 8), vLLM's is global (about 100%).
+Overload: QVAC queues, 16 users on 8 slots waited about 66 s for a first token. No request failures in any valid run.
+
+### 16.3 Context scaling on the T4, QVAC vs vLLM (8 QVAC slots, `-cram 0`, f16 KV; vLLM 0.85 util, `--dtype half`)
+
+Warm decode tok/s per user p50 at 1 / 5 / 8 users, aggregate warm tok/s at 8 users, and cold TTFT p50 (ms) at 1 / 8 users.
+All T4, single runs. For reference the A10 at 7000: QVAC 69.6 / 26.5 / 20.0 (aggregate 159.1), vLLM 68.7 / 45.9 / 43.2 (aggregate 339.5).
+
+| Prompt + 512 (server ctx) | Engine | Peak VRAM | Decode 1 / 5 / 8 | Aggregate, 8 users | Cold TTFT, 1 / 8 users |
+|---|---|---|---|---|---|
+| 7000 (8192) | QVAC | 13,913 MiB | 32.1 / 11.6 / 7.9 | 62.5 | 7,796 / 16,339 |
+| 7000 (8192) | vLLM | 12,479 MiB | 19.1 / 7.0 / 4.8 | 37.6 | 23,592 / 83,825 (0.90 util run) |
+| 3500 (4096) | QVAC | 9,301 MiB | 28.1 / 12.4 / 9.0 | 71.2 | 3,672 / 9,336 |
+| 3500 (4096) | vLLM | 12,479 MiB | 26.3 / 11.4 / 8.2 | 64.5 | 7,299 / 14,364 |
+| 1500 (2048) | QVAC | 6,995 MiB | 36.4 / 14.4 / 9.9 | 78.6 | 1,548 / 6,289 |
+| 1500 (2048) | vLLM | 12,479 MiB | 33.0 / 18.0 / 13.8 | 109.2 | 1,894 / 5,738 |
+| 500 (1024) | QVAC | 5,841 MiB | 30.7 / 14.6 / 10.4 | 82.7 | 554 / 4,075 |
+| 500 (1024) | vLLM | 12,479 MiB | 37.0 / 25.3 / 21.4 | 170.3 | 453 / 2,297 |
+
+Reading it:
+- **vLLM is far more sensitive to prompt length on the T4 than QVAC.** Its decode at 8 users goes from 4.8 to 21.4 tok/s as the prompt
+  shrinks from 7000 to 500 tokens (4.5x); QVAC's goes from 7.9 to 10.4 (1.3x). The two cross between 3500 and 1500 tokens: QVAC leads at 7000,
+  they are level at 3500, and vLLM leads at 1500 and below.
+- At 500+512, vLLM on the T4 matches the A10 in cold decode (20.1 vs 19.6 at 8 users) and beats it in aggregate cold throughput (147.9 vs 132.6).
+  Warm, it reaches about half the A10's decode.
+- vLLM's VRAM is set by its utilisation setting, not by context (12,479 MiB at every length). QVAC's falls with context, so shorter contexts free
+  VRAM for more slots (8 GiB between 7000 and 500).
+- QVAC does not reach 20 tok/s per user at five users at any context tried. vLLM does at 500+512 (25.3, warm).
+- The 1-user numbers for QVAC are flat within the ±15% noise (28 to 36). The 1500 and 500 rows show 96-99% warm cache hits rather than 100% (cause not investigated).
+- The vLLM slowdown at long context is not a backend choice: see 16.5 (`FLEX_ATTENTION` is no better; QVAC's flash attention does engage on Turing).
+
+### 16.4 DevOps shape (1024+512), T4
+
+| Engine | Cache | Decode 1 / 3 / 5 users | TTFT p50 (ms) 1 / 3 / 5 | Bar: >= 20 at 1 user | Bar: >= 20 at 5 users |
+|---|---|---|---|---|---|
+| QVAC, 5 slots x 8k | warm | 28.8 / 12.8 / 13.8 (repeat: 25.6 / 16.5 / 12.4) | 138 / 320 / 403 | met | **not met** (13.8, 12.4) |
+| QVAC, 5 slots x 8k | cold | 28.9 / 12.9 / 13.8 | 1,069 / 3,132 / 5,182 | met | **not met** |
+| vLLM, 0.85 util, 8k | warm | 33.4 / 25.5 / 20.8 (repeat: 32.8 / 25.3 / 20.6) | 73 / 126 / 156 | met | **met** (20.8, 20.6; margin under 1) |
+| vLLM, 0.85 util, 8k | cold | 33.5 / 24.0 / 18.9 | 1,079 / 2,185 / 3,261 | met | not met (18.9) |
+
+On the DevOps shape **vLLM is the better engine on this T4**, the reverse of the 7000-token result. QVAC's per-user decode drops from 28.8 at
+1 user to about 13 at 3 and 5 users (aggregate 38 and 68 tok/s). Its 5-user result clears no bar. vLLM's warm 5-user result clears it by under 1 tok/s,
+and the repeat agrees (20.6), so it is stable but thin: treat it as "at the line", not as a pass with margin.
+This shape is not comparable with the A10 tables above (§3). **Correction:** an earlier draft of this section said vLLM at 0.90 missed the bar at 18.9;
+that was the 7000-token figure, a different shape.
+
+### 16.5 Isolating the vLLM slowdown, variance, start-up and quality (second T4 box, 2026-11-03)
+
+**Attention backend.** vLLM 0.28.0 on the T4 offers only `TRITON_ATTN` (default) and `FLEX_ATTENTION`. Warm decode per user at 1 / 5 / 8 users, 0.85 util:
+
+| Prompt | `TRITON_ATTN` | `FLEX_ATTENTION` |
+|---|---|---|
+| 7000 | 19.1 / 7.0 / 4.8 | 7.0 / 6.0 / 5.5 (aggregate 43.7 vs 37.6) |
+| 500 | 37.0 / 25.3 / 21.4 | 25.6 / 17.0 / 14.0 |
+
+Switching the backend does not fix it. FLEX is worse at 1 user and only marginally better at 8 users at 7000 tokens. Rough arithmetic: a 7500-token KV cache is about
+1.1 GiB, about 3.4 ms per token at 320 GB/s, but vLLM loses about 25 ms per token between 1k and 7k prompts. That points at attention-kernel efficiency rather than memory bandwidth
+(inference from timings, not a profile).
+
+**QVAC flash attention.** `-fa on` vs `-fa off`, 8 slots x 8k, 7000+512, warm: on 24.8 / 10.2 / 7.1 (aggregate 56.3, 13,913 MiB); off 20.4 / 7.1 / 4.9 (aggregate 38.8, 14,609 MiB).
+FlashAttention is therefore engaged on sm_75 (about +20-45% decode, 700 MiB less VRAM), although the log grep for `flash` finds nothing. The earlier `-fa auto` run used the same VRAM as `on`,
+so `auto` resolves to `on`.
+
+**Variance (repeats).**
+
+| Row | Run 1 | Run 2 |
+|---|---|---|
+| QVAC 8k x 8, warm decode 1 / 5 / 8 (`auto` vs `on`, same config) | 32.1 / 11.6 / 7.9 | 24.8 / 10.2 / 7.1 |
+| QVAC 500+512 x 8, warm 1 / 5 / 8 | 30.7 / 14.6 / 10.4 | 26.7 / 12.8 / 9.7 |
+| vLLM 500+512, warm 1 / 5 / 8 | 37.0 / 25.3 / 21.4 | 33.2 / 24.4 / 21.3 |
+| DevOps vLLM warm 1 / 3 / 5 | 33.4 / 25.5 / 20.8 | 32.8 / 25.3 / 20.6 |
+| DevOps QVAC warm 1 / 3 / 5 | 28.8 / 12.8 / 13.8 | 25.6 / 16.5 / 12.4 |
+
+Run-to-run spread is about 10% typically and up to about 25% at 1 user for QVAC (32.1 vs 24.8 on the same configuration). vLLM is steadier. No conclusion above depends on a difference smaller than that
+except the vLLM 5-user DevOps result, which reproduced (20.8, 20.6).
+
+**Start-up** (T4; A10 in brackets). QVAC warm 2.75-2.97 s (4 boots) [1.5-1.6 s]; QVAC after weights evicted from page cache 7.1-7.8 s (4) [3.0 s]; vLLM warm 71.4-72.8 s (3) [41-42 s];
+vLLM with compile caches cleared and weights evicted 155 s (1) [90 s]. The first vLLM boot on a fresh box (190 s) had empty compile caches and is not a warm figure; it is excluded.
+VRAM after load: QVAC 10,447 MiB (5 slots x 8k), vLLM 12,431 MiB. A `startupProbe` for vLLM on the T4 needs at least 240 s of budget (155 s cold + margin); QVAC needs about 20 s.
+Local disk, not the ACA Azure Files share, so cold figures are a floor.
+
+**Quality** (temperature 0, thinking disabled; same probes as §10). vLLM AWQ 31/40 answers, json_schema 5/5, tools 5/5 (with `--enable-auto-tool-choice --tool-call-parser hermes`).
+QVAC Q4_K_M 33/40, 5/5, 5/5. Exact-text agreement 31/40. This matches the A10 numbers (31 and 32 of 40) within a case or two. A first vLLM pass without the tool flags scored 0/5 on tools;
+that was my script omitting them, not an engine difference (data kept in `parity_night3/quality_vllm.*`, not to be quoted).
+
+### 16.6 Caveats
+
+- Mostly single runs; see the variance table. The A10 numbers are 2-3 repeats.
+- The vLLM 3500, 1500 and 500 rows are at 0.85 utilisation; the 7000 row decode is 0.85, while its cold TTFT cell is from the 0.90 run (the 0.85 cold suite was skipped).
+- Two rented T4 boxes were used (Pennsylvania, then Texas). The second had 8 effective cores against about 36; the load generator and server ran on it without errors, but I did not test whether core count affects the numbers.
+- Failure probes and the gateway were not run on the T4. Numbers are from rented boxes; re-confirm on the real ACA T4.
+- Quarantined, never quote: `vllm-c8k-u085/old_killed_run_night1/`, `vllm-c4k-u085/old_killed_night2/`, `parity_night3/quality_vllm.*`.
+- Raw data: `results/head-to-head-t4/` (untracked).

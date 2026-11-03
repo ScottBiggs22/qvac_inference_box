@@ -1,0 +1,3 @@
+stopped; GPU memory used: 0 MiB
+started vllm as vllm-boot-warm (pid 7562), log /root/h2h/logs/vllm-boot-warm.log
+{"kind": "boot", "engine": "vllm", "name": "vllm-boot-warm", "mode": "warm", "extra": ["--dtype", "half"], "model_files": [], "model_bytes": 0, "timestamp": "2026-11-03T15:50:18Z", "resident_before_start": null, "t_log_ready_s": 190.15, "t_health_s": 190.15, "t_first_token_s": 191.36, "first_request_status": 200, "second_request_ms": 64.5, "gpu_used_mib_after_load": 12431, "resident_after_load": null, "log": "/root/h2h/logs/vllm-boot-warm.log"}

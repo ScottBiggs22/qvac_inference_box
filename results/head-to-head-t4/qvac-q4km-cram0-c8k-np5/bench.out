@@ -1,0 +1,60 @@
+=== smoke  2026-10-31T01:22:22Z
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      26.84   26.84    26.62    26.84     194.99   194.99     56.34   99.8    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5/smoke.jsonl
+=== smoke done rc=0  2026-10-31T01:22:50Z
+=== A_warm_short  2026-10-31T01:22:50Z
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      26.75   26.68    26.55    26.55     190.55   214.19     56.82   99.8    0
+    5   0       11.3   11.28    55.99    56.04     524.48   658.32    216.42   99.8    0
+    8   0      11.28   11.24    53.82    55.91   45938.36 46176.19    178.04   99.8    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5/A_warm_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 11.3 tok/s/user, prompt=7000 tokens, cache=warm)
+=== A_warm_short done rc=0  2026-10-31T01:40:00Z
+=== A_cold_short  2026-10-31T01:40:00Z
+calibrated: 7000 prompt tokens (target 7000) with 6959 filler words, 3 probes
+warmup: 2 request(s), excluded from all statistics
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      26.41   26.37    18.86    19.77    7801.53  7810.42   7651.76    0.1    0
+    5   0       7.79    7.11    30.39    32.09   18583.62 35683.28   9440.78    0.1    0
+    8   0       7.26    6.74    30.27    30.76   81494.02 91593.77   9103.52    0.1    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5/A_cold_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 7.79 tok/s/user, prompt=7000 tokens, cache=cold)
+=== A_cold_short done rc=0  2026-10-31T02:06:03Z
+=== devops_warm  2026-10-31T02:06:03Z
+calibrated: 1024 prompt tokens (target 1024) with 994 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0       28.8   28.59    28.62    28.57     138.26   141.26     45.55   98.4    0
+    3   0      12.84   12.76     38.1    38.23     320.01  2157.89    104.94   91.8    0
+    5   0      13.83   13.81    68.06    68.64     402.75  2297.02    194.79   91.8    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5/devops_warm.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 13.83 tok/s/user, prompt=1024 tokens, cache=warm)
+DevOps acceptance (>=20 tok/s single-stream decode at 1 user): MET (28.79 tok/s, first token -> completion)
+=== devops_warm done rc=0  2026-10-31T02:26:30Z
+=== devops_cold  2026-10-31T02:26:30Z
+calibrated: 1024 prompt tokens (target 1024) with 983 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      28.93   28.75    27.32    27.32    1068.88  1075.14    976.97    0.5    0
+    3   0      12.86    9.78    35.77    35.96    3132.15  3173.65   1970.64    0.5    0
+    5   0      13.83   13.14    60.83     62.0    5182.45  5218.64   2016.86    0.5    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5/devops_cold.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 13.83 tok/s/user, prompt=1024 tokens, cache=cold)
+DevOps acceptance (>=20 tok/s single-stream decode at 1 user): MET (28.93 tok/s, first token -> completion)
+=== devops_cold done rc=0  2026-10-31T02:48:20Z

@@ -1,0 +1,12 @@
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      18.95   18.89    18.81    18.81      277.1   288.44    202.49   99.7    0
+    5   0       6.98    6.94    34.56    34.55      927.6  1001.78     572.5   99.7    0
+    8   0       4.73    4.69    29.91    37.48     1271.3  1485.34         -   99.7   24
+         errors: {'RemoteProtocolError': 8, 'ConnectError': 16}
+
+wrote /root/h2h/out/t4/vllm-c8k-u085/A_warm_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 6.98 tok/s/user, prompt=7000 tokens, cache=warm)
+WARNING: 24 request(s) failed. Numbers above cover successes only -- do not report them without the failure count.

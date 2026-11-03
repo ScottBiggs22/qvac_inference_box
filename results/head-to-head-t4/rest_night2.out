@@ -1,0 +1,15 @@
+STEP ctx curve start 04:24:30
+STEP qvac-q4km-cram0-c2k-np8 up 04:24:30
+STEP qvac-q4km-cram0-c2k-np8 done 04:51:38
+STEP qvac-q4km-cram0-c1k-np8 up 04:51:38
+STEP qvac-q4km-cram0-c1k-np8 done 05:16:20
+STEP vllm-c2k-u085 up 05:16:20
+STEP vllm-c2k-u085 done 05:42:32
+STEP vllm-c1k-u085 up 05:42:32
+STEP vllm-c1k-u085 done 05:59:12
+STEP CURVE_DONE 05:59:12
+STEP vllm-c8k-u085 up 05:59:12
+STEP vllm-c8k-u085 done 06:57:23
+STEP SUITES_DONE 06:57:23
+STEP vllm-c4k-u085 up 06:57:23
+PAUSED_BY_USER 07:17:20

@@ -1,0 +1,61 @@
+=== smoke  2026-10-31T03:23:08Z
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      19.24   19.24     19.1    19.24     251.22   251.22     197.6   99.7    0
+
+wrote /root/h2h/out/t4/vllm-c8k-u090/smoke.jsonl
+=== smoke done rc=0  2026-10-31T03:23:59Z
+=== A_warm_short  2026-10-31T03:23:59Z
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      18.85   18.78    18.71    18.71     273.31   281.44    203.52   99.7    0
+    5   0       6.95     6.9    34.39    34.39     932.83  1016.52    574.71   99.7    0
+    8   0        4.7    4.67    37.24    37.24    1319.06  1484.31    860.76   99.7    0
+
+wrote /root/h2h/out/t4/vllm-c8k-u090/A_warm_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 6.95 tok/s/user, prompt=7000 tokens, cache=warm)
+=== A_warm_short done rc=0  2026-10-31T03:48:53Z
+=== A_cold_short  2026-10-31T03:48:53Z
+calibrated: 7000 prompt tokens (target 7000) with 6959 filler words, 3 probes
+warmup: 2 request(s), excluded from all statistics
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      18.71    18.7    10.06    10.88   23591.98 23608.78   23520.0    0.0    0
+    5   0       3.38    3.02    13.16    13.89   42769.13 85430.41  34464.86    0.0    0
+    8   0       2.43    1.81    12.95    13.13   83825.04 174989.09  35528.87    0.0    0
+
+wrote /root/h2h/out/t4/vllm-c8k-u090/A_cold_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 3.38 tok/s/user, prompt=7000 tokens, cache=cold)
+=== A_cold_short done rc=0  2026-10-31T04:47:55Z
+=== F_cross  2026-10-31T04:47:55Z
+calibrated: 7000 prompt tokens (target 7000) with 6959 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    2   0      13.15   13.12    26.06     26.3     397.96   503.53    291.61   99.7    0
+    4   0       8.29    8.26    32.84    33.15     667.02   859.78    449.96   99.7    0
+    8   0       4.74     4.7    37.45     37.8    1489.82  1496.73    871.12   99.7    0
+    2   1      13.16   13.13    26.09    26.32     400.54   502.39    297.78   99.7    0
+    4   1       8.29    8.26    32.83    33.13     658.76   846.01    448.63   99.7    0
+    8   1       4.74     4.7    37.45     37.8    1476.16  1486.54    871.43   99.7    0
+    2   2      13.16   13.13    26.09    26.33     399.87   504.68    291.37   99.7    0
+    4   2       8.28    8.25    32.82    33.12      655.8   848.92    446.62   99.7    0
+    8   2       4.74     4.7    37.46    37.82    1496.67  1501.99    870.55   99.7    0
+
+wrote /root/h2h/out/t4/vllm-c8k-u090/F_cross.jsonl
+=== F_cross done rc=0  2026-10-31T05:06:56Z
+=== E_sat  2026-10-31T05:06:56Z
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+   12   0       3.26    3.24    38.79    38.92    1681.57  2267.42   1199.75   99.7    0
+   16   0       2.51     2.5    39.93    40.06    1793.78  2909.82   1553.88   99.7    0
+
+wrote /root/h2h/out/t4/vllm-c8k-u090/E_sat.jsonl
+=== E_sat done rc=0  2026-10-31T05:25:35Z

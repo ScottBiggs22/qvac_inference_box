@@ -1,0 +1,11 @@
+calibrated: 1024 prompt tokens (target 1024) with 994 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      25.62   25.27    25.51    25.46     137.48   151.78     50.22   98.4    0
+    3   0      16.52    16.5    48.82    49.07      343.4  2150.81    103.71   91.8    0
+    5   0      12.39   12.36    60.89    61.35     461.84  2391.81    157.01   91.8    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5-rep2/devops_warm.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 12.39 tok/s/user, prompt=1024 tokens, cache=warm)
+DevOps acceptance (>=20 tok/s single-stream decode at 1 user): MET (25.61 tok/s, first token -> completion)
