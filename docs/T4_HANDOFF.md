@@ -1,9 +1,9 @@
 # T4 benchmark: handoff (final, 2026-11-03)
 
-**State: complete. No box is running** (`vastai show instances`, `show volumes`, `show ssh-keys` were all `[]` after the last destroy). Nothing is committed.
+**State: complete. No box is running** (`vastai show instances`, `show volumes`, `show ssh-keys` were all `[]` after the last destroy). Committed and pushed on branch `bench/t4-results` (not merged to `main`; no PR opened).
 Results and write-up: `docs/T4_RESULTS.md` (summary and decision guide) and `docs/HEAD_TO_HEAD.md` §16 (full tables).
 
-## What exists (all uncommitted)
+## What exists
 
 | Path | What |
 |---|---|
