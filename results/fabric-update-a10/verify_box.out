@@ -1,0 +1,22 @@
+=== Rented box verification ===
+
+GPUs visible: 1
+  0, NVIDIA A10, 23028 MiB, 595.91.07
+
+  [32mPASS[0m  exactly one GPU visible
+  [32mPASS[0m  card is 'NVIDIA A10'
+  [32mPASS[0m  VRAM 23028 MiB (full 24 GB card)
+  [32mPASS[0m  card is idle (0 MiB used)
+  driver: 595.91.07
+  CUDA Version: 13.2
+  ^ record both: this is the minimum we hand DevOps (Q17)
+  [32mPASS[0m  disk free 53 GB
+  [33mWARN[0m  no /sys/fs/cgroup/cpu.max (cgroup v1?) -- check the CPU quota by hand; nproc=96
+
+=== Data hygiene (PRD §4.8) ===
+  [32mPASS[0m  no real-data artefacts present
+  [32mPASS[0m  no retrieval corpus present
+  [32mPASS[0m  no credential-shaped material found
+
+All hard requirements met. Record the driver/CUDA lines above in
+docs/PHASE1_RESULTS.md before pulling any weights.

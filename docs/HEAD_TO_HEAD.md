@@ -6,6 +6,12 @@
 > actually served Q4_K_M because of a harness bug (§13). Its data are quarantined in
 > `results/head-to-head-a10/qvac-q8-INVALID-served-q4km/` and must not be quoted.
 >
+> **Addendum (2026-11-18): current QVAC Fabric is much faster under concurrency.** On the same A10
+> box, fabric `v11739.4.0` (build 12847, the engine of npm `@qvac/fabric-linux-x64` 0.31.0) lifts
+> QVAC `-cram 0` from 20.1 to **30.8 tok/s/user at 8 users warm** (aggregate 159 → 242). Single-user
+> speed and prefill are unchanged, and it **still fails R1 cold at 5 users** (~18). QVAC figures
+> below are for build 9240. See `docs/FABRIC_UPDATE_A10.md`.
+>
 > **Addendum (2026-11-02, interim): Tesla T4 data is in §16.** Same harness and suites on one
 > 16 GB T4 (vast.ai), still being collected. Everything above is A10 only.
 >

@@ -1,0 +1,2 @@
+NVIDIA A10, 595.91.07
+vast.ai machine 123534 (Illinois), contract 61277463, image vllm/vllm-openai:v0.28.0
