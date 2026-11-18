@@ -1,0 +1,10 @@
+{"engine":"qvac","name":"sw-qvac-c8192-np8-f16","ctx":8192,"np":8,"kv":"f16","util":"-","status":"up","vram_mib":13903,"vram_total_mib":15360,"t_health_s":2.7,"note":""}
+{"engine":"qvac","name":"sw-qvac-c8192-np5-f16","ctx":8192,"np":5,"kv":"f16","util":"-","status":"up","vram_mib":10447,"vram_total_mib":15360,"t_health_s":2.66,"note":""}
+{"engine":"qvac","name":"sw-qvac-c8192-np8-q8_0","ctx":8192,"np":8,"kv":"q8_0","util":"-","status":"up","vram_mib":9783,"vram_total_mib":15360,"t_health_s":2.65,"note":""}
+{"engine":"qvac","name":"sw-qvac-c8192-np5-q8_0","ctx":8192,"np":5,"kv":"q8_0","util":"-","status":"up","vram_mib":7851,"vram_total_mib":15360,"t_health_s":2.64,"note":""}
+{"engine":"qvac","name":"sw-qvac-c4096-np12-f16","ctx":4096,"np":12,"kv":"f16","util":"-","status":"up","vram_mib":11595,"vram_total_mib":15360,"t_health_s":2.81,"note":""}
+{"engine":"qvac","name":"sw-qvac-c4096-np8-f16","ctx":4096,"np":8,"kv":"f16","util":"-","status":"up","vram_mib":9291,"vram_total_mib":15360,"t_health_s":2.65,"note":""}
+{"engine":"qvac","name":"sw-qvac-c4096-np5-f16","ctx":4096,"np":5,"kv":"f16","util":"-","status":"up","vram_mib":7563,"vram_total_mib":15360,"t_health_s":2.66,"note":""}
+{"engine":"qvac","name":"sw-qvac-c4096-np12-q8_0","ctx":4096,"np":12,"kv":"q8_0","util":"-","status":"up","vram_mib":8491,"vram_total_mib":15360,"t_health_s":2.65,"note":""}
+SWEEP_DONE 23:57:38
+SWEEP_EXIT=0

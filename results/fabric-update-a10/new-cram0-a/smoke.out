@@ -1,0 +1,7 @@
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      71.03   71.03    70.23    71.03      92.67    92.67     24.85   99.8    0
+
+wrote /root/h2h/out/new-cram0-a/smoke.jsonl

@@ -1,0 +1,584 @@
+diff --git a/scripts/h2h_bench.sh b/scripts/h2h_bench.sh
+index d9a789c..6be46b3 100755
+--- a/scripts/h2h_bench.sh
++++ b/scripts/h2h_bench.sh
+@@ -50,8 +50,9 @@ mkdir -p "$out"
+ 
+ common=(--url "http://127.0.0.1:$PORT/v1" --direct --api-key "$API_KEY"
+         --model qwen3-8b --metrics-url "http://127.0.0.1:$PORT/metrics"
+-        --model-len 8192 --timeout 600)
+-main_shape=(--prompt-tokens 7000 --max-tokens 512 --ignore-eos)
++        --model-len "${CTX:-8192}" --timeout 600)
++# PROMPT_TOKENS/CTX override for the T4's 4k run (PROMPT_TOKENS=3500 CTX=4096).
++main_shape=(--prompt-tokens "${PROMPT_TOKENS:-7000}" --max-tokens 512 --ignore-eos)
+ warm_each=(--warmup 1 --warmup-per-level --warmup-concurrency level)
+ devops_shape=(--prompt-tokens 1024 --max-tokens 512 --min-tokens 512 --ignore-eos
+               --levels 1,3,5 --requests-per-level 30 --warmup 1 --warmup-per-level)
+diff --git a/scripts/h2h_compare.py b/scripts/h2h_compare.py
+new file mode 100644
+index 0000000..7994f8a
+--- /dev/null
++++ b/scripts/h2h_compare.py
+@@ -0,0 +1,143 @@
++#!/usr/bin/env python3
++"""Side-by-side of two head-to-head result trees (A10 vs T4), same suite and level.
++
++    python3 scripts/h2h_compare.py results/head-to-head-a10 results/head-to-head-t4 \\
++        --pair vllm=vllm-c8k-u090 --pair qvac-q4km-cram0=qvac-q4km-cram0-c8k-np8
++
++Each `--pair A=B` matches engine directory A under the first root with B under
++the second. Suites are matched by canonical name: a trailing `_r2` / `_short`
++is dropped, so the A10's `A_warm_r2` meets the T4's `A_warm_short`. Only
++concurrency levels present on both sides are compared.
++
++Columns are the h2h_report.py ones (per-user decode p50, aggregate wall tok/s,
++TTFT p50 / p95, cache hit) for each card, plus T4/A10 ratios. A mismatch in
++prompt tokens, max_tokens or cache mode is printed above the table and the
++table is still produced: a 4k-context T4 run against the 7000-token A10 run is
++a legitimate (labelled) comparison, not an error. Peak VRAM comes from each
++directory's gpu.csv.
++"""
++from __future__ import annotations
++
++import argparse
++import re
++import statistics
++import sys
++from pathlib import Path
++
++from h2h_report import load, prefill_and_cache
++
++
++def canon(suite: str) -> str:
++    return re.sub(r"_(r2|short)$", "", suite)
++
++
++def level_means(levels: list[dict]) -> dict[int, dict]:
++    out = {}
++    for c in sorted({x["concurrency"] for x in levels}):
++        ls = [x for x in levels if x["concurrency"] == c]
++        hit = [p[1] for p in map(prefill_and_cache, ls) if p[1] is not None]
++
++        def mean(key):
++            v = [x.get(key) for x in ls if x.get(key) is not None]
++            return statistics.fmean(v) if v else None
++        out[c] = {"decode": mean("per_user_decode_tok_s_p50"),
++                  "aggr": mean("aggregate_decode_tok_s"),
++                  "ttft50": mean("ttft_ms_p50"), "ttft95": mean("ttft_ms_p95"),
++                  "hit": statistics.fmean(hit) if hit else None,
++                  "fail": sum(x["failures"] for x in ls), "reps": len(ls)}
++    return out
++
++
++def suites_in(d: Path) -> dict[str, Path]:
++    found = {}
++    for p in sorted(d.glob("*.jsonl")):
++        if p.stem in ("boot", "quality", "matrix"):
++            continue
++        try:
++            header, levels, _ = load(p)
++        except Exception:
++            continue
++        if header.get("kind") == "header" and levels:
++            found[canon(p.stem)] = p
++    return found
++
++
++def peak_vram(d: Path) -> str:
++    p = d / "gpu.csv"
++    if not p.exists():
++        return "-"
++    peak = 0
++    for line in p.read_text().splitlines()[1:]:
++        f = line.split(",")
++        if len(f) > 3:
++            m = re.search(r"\d+", f[3])
++            if m:
++                peak = max(peak, int(m.group()))
++    return f"{peak} MiB" if peak else "-"
++
++
++def f(v, nd=1):
++    return "-" if v is None else f"{v:.{nd}f}"
++
++
++def ratio(t4, a10):
++    return "-" if not t4 or not a10 else f"{t4 / a10:.2f}x"
++
++
++def pct(v):
++    return "-" if v is None else f"{100 * v:.0f}%"
++
++
++def compare(root_a: Path, root_b: Path, ea: str, eb: str) -> list[str]:
++    da, db = root_a / ea, root_b / eb
++    out = [f"### {ea} (A10) vs {eb} (T4)", "",
++           f"Peak VRAM from gpu.csv: A10 {peak_vram(da)}, T4 {peak_vram(db)}", ""]
++    sa, sb = suites_in(da), suites_in(db)
++    for suite in sorted(set(sa) & set(sb)):
++        ha, la, _ = load(sa[suite])
++        hb, lb, _ = load(sb[suite])
++        warn = [f"{k}: A10 {ha.get(k)} vs T4 {hb.get(k)}"
++                for k in ("prompt_tokens_target", "max_tokens", "cache_mode")
++                if ha.get(k) != hb.get(k)]
++        ma, mb = level_means(la), level_means(lb)
++        out += [f"#### {suite}  (A10 file {sa[suite].name}, T4 file {sb[suite].name})", ""]
++        if warn:
++            out += ["> SHAPE MISMATCH: " + "; ".join(warn), ""]
++        out += ["| conc | decode A10 | decode T4 | T4/A10 | aggr A10 | aggr T4 | T4/A10 "
++                "| TTFT p50 A10 | T4 | p95 A10 | T4 | cache A10 | T4 | fail A10/T4 |",
++                "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
++        for c in sorted(set(ma) & set(mb)):
++            a, b = ma[c], mb[c]
++            out.append(
++                f"| {c} | {f(a['decode'])} | {f(b['decode'])} | {ratio(b['decode'], a['decode'])} "
++                f"| {f(a['aggr'])} | {f(b['aggr'])} | {ratio(b['aggr'], a['aggr'])} "
++                f"| {f(a['ttft50'], 0)} | {f(b['ttft50'], 0)} | {f(a['ttft95'], 0)} | {f(b['ttft95'], 0)} "
++                f"| {pct(a['hit'])} | {pct(b['hit'])} | {a['fail']}/{b['fail']} |")
++        out += ["", f"_reps: A10 {sorted({v['reps'] for v in ma.values()})}, "
++                    f"T4 {sorted({v['reps'] for v in mb.values()})}; levels compared: "
++                    f"{sorted(set(ma) & set(mb))}_", ""]
++    only_a, only_b = sorted(set(sa) - set(sb)), sorted(set(sb) - set(sa))
++    if only_a or only_b:
++        out.append(f"_not compared: A10-only {only_a}, T4-only {only_b}_")
++    return out
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
++    ap.add_argument("root_a10", type=Path)
++    ap.add_argument("root_t4", type=Path)
++    ap.add_argument("--pair", action="append", required=True, metavar="A10DIR=T4DIR")
++    args = ap.parse_args()
++    for pair in args.pair:
++        ea, _, eb = pair.partition("=")
++        if not eb or not (args.root_a10 / ea).is_dir() or not (args.root_t4 / eb).is_dir():
++            print(f"skip pair {pair!r}: directory missing", file=sys.stderr)
++            continue
++        print("\n".join(compare(args.root_a10, args.root_t4, ea, eb)))
++        print()
++    return 0
++
++
++if __name__ == "__main__":
++    sys.path.insert(0, str(Path(__file__).resolve().parent))
++    sys.exit(main())
+diff --git a/scripts/h2h_curve.py b/scripts/h2h_curve.py
+new file mode 100644
+index 0000000..72c444e
+--- /dev/null
++++ b/scripts/h2h_curve.py
+@@ -0,0 +1,67 @@
++#!/usr/bin/env python3
++"""Context-length curve from one result tree: decode, aggregate, TTFT and VRAM by prompt length.
++
++    python3 scripts/h2h_curve.py results/head-to-head-t4 \\
++        --group "QVAC=qvac-q4km-cram0-c8k-np8,qvac-q4km-cram0-c4k-np8,qvac-q4km-cram0-c2k-np8,qvac-q4km-cram0-c1k-np8" \\
++        --group "vLLM 0.85=vllm-c8k-u085,vllm-c4k-u085,vllm-c2k-u085,vllm-c1k-u085"
++
++Each --group NAME=DIR,DIR,... is one engine config; directories are sorted by the prompt
++length recorded in the A_warm / A_cold header. One table per suite, rows by prompt length,
++columns at the requested concurrency levels (default 1,5,8). Missing suites show "-".
++"""
++from __future__ import annotations
++
++import argparse
++import sys
++from pathlib import Path
++
++from h2h_compare import f, level_means, peak_vram, suites_in
++from h2h_report import load
++
++
++def rows_for(root: Path, dirs: list[str], suite: str):
++    rows = []
++    for d in dirs:
++        p = root / d
++        if not p.is_dir():
++            continue
++        found = suites_in(p)
++        if suite not in found:
++            rows.append((10**9, d, None, None, peak_vram(p)))
++            continue
++        header, levels, _ = load(found[suite])
++        rows.append((header.get("prompt_tokens_target") or 0, d, header, level_means(levels), peak_vram(p)))
++    return sorted(rows, key=lambda r: -r[0] if r[0] < 10**9 else 0)
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
++    ap.add_argument("root", type=Path)
++    ap.add_argument("--group", action="append", required=True, metavar="NAME=DIR,DIR")
++    ap.add_argument("--levels", default="1,5,8")
++    ap.add_argument("--suites", default="A_warm,A_cold")
++    args = ap.parse_args()
++    lv = [int(x) for x in args.levels.split(",")]
++    for suite in args.suites.split(","):
++        print(f"#### {suite}: decode tok/s per user p50 at {'/'.join(map(str, lv))} users; "
++              f"aggregate and TTFT p50 (ms) at {lv[-1]} users\n")
++        print("| Engine | Prompt tokens | Directory | Decode | Aggregate | TTFT p50 | Peak VRAM | Cache hit |")
++        print("|---|---|---|---|---|---|---|---|")
++        for g in args.group:
++            name, _, dirs = g.partition("=")
++            for pt, d, hdr, m, vram in rows_for(args.root, dirs.split(","), suite):
++                if m is None:
++                    print(f"| {name} | - | {d} | - | - | - | {vram} | - |")
++                    continue
++                dec = " / ".join(f(m[c]["decode"]) if c in m else "-" for c in lv)
++                last = m.get(lv[-1])
++                hit = f"{100 * last['hit']:.0f}%" if last and last["hit"] is not None else "-"
++                print(f"| {name} | {pt} | {d} | {dec} | {f(last['aggr']) if last else '-'} "
++                      f"| {f(last['ttft50'], 0) if last else '-'} | {vram} | {hit} |")
++        print()
++    return 0
++
++
++if __name__ == "__main__":
++    sys.path.insert(0, str(Path(__file__).resolve().parent))
++    sys.exit(main())
+diff --git a/scripts/h2h_serve.sh b/scripts/h2h_serve.sh
+index e084a45..734dffd 100755
+--- a/scripts/h2h_serve.sh
++++ b/scripts/h2h_serve.sh
+@@ -14,6 +14,9 @@
+ # The engine is started in its own session (setsid) and stopped by process
+ # group from the recorded pid, so no pattern match is ever needed.
+ #
++# CTX (default 8192) is the per-sequence context: vLLM --max-model-len, and
++# QVAC -c = CTX * NP. The T4 sweep runs 8192 and 4096.
++#
+ # Paths and the throwaway key come from /root/h2h/env.sh:
+ #   API_KEY=...            throwaway, generated on the box
+ #   VLLM_MODEL=Qwen/Qwen3-8B-AWQ   VLLM_REV=4da05a8e...
+@@ -82,7 +85,7 @@ case "$engine" in
+     #   --enable-prompt-tokens-details     per-request cached_tokens in usage
+     cmd=(vllm serve "${VLLM_MODEL:-Qwen/Qwen3-8B-AWQ}"
+          --revision "${VLLM_REV:-4da05a8edb55c6046cce958586c33b61da07bb79}"
+-         --max-model-len 8192 --gpu-memory-utilization "${VLLM_GPU_UTIL:-0.90}"
++         --max-model-len "${CTX:-8192}" --gpu-memory-utilization "${VLLM_GPU_UTIL:-0.90}"
+          --no-enable-log-requests --no-enable-log-outputs
+          --served-model-name qwen3-8b ${key_args[@]+"${key_args[@]}"}
+          --enable-prompt-tokens-details
+@@ -100,7 +103,7 @@ case "$engine" in
+     np=${NP:-8}
+     cmd=("${QVAC_BIN:-/root/qvac/build/bin/llama-server}"
+          -m "${GGUF:-/root/models/Qwen3-8B-Q4_K_M.gguf}"
+-         -c $((8192 * np)) -np "$np" -ngl 99 -fa "${FA:-on}"
++         -c $((${CTX:-8192} * np)) -np "$np" -ngl 99 -fa "${FA:-on}"
+          ${key_args[@]+"${key_args[@]}"} --alias qwen3-8b --metrics
+          --reasoning-format "${REASONING_FORMAT:-auto}"
+          --host 127.0.0.1 --port "$PORT" "$@")
+diff --git a/scripts/t4_ctx_curve.sh b/scripts/t4_ctx_curve.sh
+new file mode 100644
+index 0000000..843462c
+--- /dev/null
++++ b/scripts/t4_ctx_curve.sh
+@@ -0,0 +1,55 @@
++#!/usr/bin/env bash
++# T4 context-length scaling curve: the shorter-context points that join
++# t4_suites.sh's 8k (7000+512) and 4k (3500+512) runs, so decode speed, prefill
++# and TTFT can be plotted against prompt length at the same levels (1, 5, 8).
++#
++#   prompt  server ctx   from
++#    7000     8192       t4_suites.sh   (qvac-q4km-cram0-c8k-np8, vllm-c8k-u090)
++#    3500     4096       t4_suites.sh   (qvac-q4km-cram0-c4k-np8, vllm-c4k-u085)
++#    1500     2048       this script    (c2k)
++#     500     1024       this script    (c1k)
++#
++# Slots are held at 8 (QVAC) so only the context changes. Per-slot KV shrinks
++# with it (144 KiB/token), so the same card has room for far more slots at
++# 2k/1k; that capacity trade is arithmetic plus the t4_sweep.sh loads, and is
++# not re-measured here.
++#
++# Waits for t4_suites.sh to finish first (the GPU is single-tenant).
++#   bash scripts/t4_ctx_curve.sh
++set -uo pipefail
++H2H=/root/h2h; REPO=/root/repo; O=$H2H/out/t4; Q4=/root/models/Qwen3-8B-Q4_K_M.gguf
++# shellcheck disable=SC1091
++. $H2H/env.sh
++export GGUF=$Q4 FA=${FA:-auto}
++step() { echo "STEP $* $(date -u +%T)"; }
++
++# Standalone now: the earlier wait on /root/suites.out is only needed when queued behind t4_suites.sh.
++[ "${WAIT_FOR_SUITES:-0}" = 1 ] && until grep -q SUITES_EXIT /root/suites.out 2>/dev/null; do sleep 30; done
++step "ctx curve start"
++
++# run NAME ENGINE CTX PROMPT_TOKENS NP UTIL SUITES -- engine flags  (as t4_suites.sh)
++run() {
++  local name=$1 e=$2 ctx=$3 pt=$4 np=$5 util=$6 suites=$7; shift 8
++  step "$name up"
++  CTX=$ctx NP=$np VLLM_GPU_UTIL=$util bash $REPO/scripts/h2h_serve.sh start "$e" "$name" "$@" > /dev/null
++  for _ in $(seq 1 6000); do curl -sf localhost:8000/health > /dev/null && break; sleep 0.2; done
++  if ! curl -sf localhost:8000/health > /dev/null; then
++    echo "  $name did not come up"; tail -20 $H2H/logs/$name.log; return 1
++  fi
++  mkdir -p "$O/$name"
++  cp $H2H/run/$name.cmd "$O/$name/" 2>/dev/null
++  CTX=$ctx PROMPT_TOKENS=$pt bash $REPO/scripts/h2h_bench.sh "$O/$name" $suites > "$O/$name/bench.out" 2>&1
++  cp $H2H/logs/$name.log "$O/$name/server.log"
++  bash $REPO/scripts/h2h_serve.sh stop > /dev/null
++  step "$name done"
++}
++
++for cfg in "2048 1500 c2k" "1024 500 c1k"; do
++  set -- $cfg
++  run qvac-q4km-cram0-$3-np8 qvac "$1" "$2" 8 - "smoke A_warm_short A_cold_short" -- -cram 0
++done
++for cfg in "2048 1500 c2k" "1024 500 c1k"; do
++  set -- $cfg
++  run vllm-$3-u085 vllm "$1" "$2" 0 0.85 "smoke A_warm_short A_cold_short" -- --dtype half
++done
++step CURVE_DONE
+diff --git a/scripts/t4_parity.sh b/scripts/t4_parity.sh
+new file mode 100644
+index 0000000..3fdf045
+--- /dev/null
++++ b/scripts/t4_parity.sh
+@@ -0,0 +1,52 @@
++#!/usr/bin/env bash
++# The A10 head-to-head's non-throughput axes, on the T4: start-up timings
++# (HEAD_TO_HEAD.md §8) and quality parity (§10). QVAC at the ACA shape
++# (5 slots x 8192, -cram 0), vLLM at the handoff's flags (0.85, --dtype half).
++# Output: /root/h2h/out/t4/parity/
++#   bash scripts/t4_parity.sh
++# Run from a FILE under setsid nohup (docs/VAST_AI_OPERATIONS.md §7).
++set -uo pipefail
++H2H=/root/h2h; REPO=/root/repo; O=$H2H/out/t4/parity; Q4=/root/models/Qwen3-8B-Q4_K_M.gguf
++mkdir -p "$O"
++# shellcheck disable=SC1091
++. $H2H/env.sh
++export GGUF=$Q4 FA=${FA:-auto} CTX=8192
++step() { echo "STEP $* $(date -u +%T)"; }
++
++wait_up() {
++  for _ in $(seq 1 9000); do curl -sf localhost:8000/health > /dev/null && return 0; sleep 0.2; done
++  return 1
++}
++
++step "qvac boot timings"
++for mode in warm cold_weights; do
++  NP=5 python3 $REPO/scripts/h2h_boot_timer.py qvac "qvac-boot-$mode" --mode $mode \
++    -o $O/qvac_boot.jsonl --timeout 600 -- -cram 0 > $O/qvac-boot-$mode.out 2>&1
++done
++step "qvac quality"
++NP=5 bash $REPO/scripts/h2h_serve.sh start qvac qvac-parity -cram 0 > /dev/null
++if wait_up; then
++  python3 $REPO/scripts/h2h_quality.py run --label qvac-q4km-t4 --api-key "$API_KEY" \
++    -o $O/quality_qvac.jsonl > $O/quality_qvac.out 2>&1
++else echo "qvac did not come up" > $O/quality_qvac.out; fi
++cp $H2H/logs/qvac-parity.log $O/qvac-parity.server.log 2>/dev/null
++bash $REPO/scripts/h2h_serve.sh stop > /dev/null
++
++step "vllm boot timings"
++for mode in warm cold_full; do
++  VLLM_GPU_UTIL=0.85 python3 $REPO/scripts/h2h_boot_timer.py vllm "vllm-boot-$mode" --mode $mode \
++    -o $O/vllm_boot.jsonl --timeout 1500 -- --dtype half > $O/vllm-boot-$mode.out 2>&1
++done
++step "vllm quality"
++VLLM_GPU_UTIL=0.85 bash $REPO/scripts/h2h_serve.sh start vllm vllm-parity --dtype half \
++  --enable-auto-tool-choice --tool-call-parser hermes > /dev/null   # A10 quality run needed these for tool calls
++if wait_up; then
++  python3 $REPO/scripts/h2h_quality.py run --label vllm-awq-t4 --api-key "$API_KEY" \
++    -o $O/quality_vllm.jsonl > $O/quality_vllm.out 2>&1
++else echo "vllm did not come up" > $O/quality_vllm.out; fi
++cp $H2H/logs/vllm-parity.log $O/vllm-parity.server.log 2>/dev/null
++bash $REPO/scripts/h2h_serve.sh stop > /dev/null
++
++[ -f $O/quality_qvac.jsonl ] && [ -f $O/quality_vllm.jsonl ] \
++  && python3 $REPO/scripts/h2h_quality.py compare $O/quality_vllm.jsonl $O/quality_qvac.jsonl > $O/quality_compare.txt 2>&1
++step PARITY_DONE
+diff --git a/scripts/t4_suites.sh b/scripts/t4_suites.sh
+new file mode 100755
+index 0000000..843599b
+--- /dev/null
++++ b/scripts/t4_suites.sh
+@@ -0,0 +1,80 @@
++#!/usr/bin/env bash
++# T4 load suites on the configs the fit sweep (t4_sweep.sh) showed to load.
++# Same suite names, prompt shape and result layout as the A10 head-to-head, so
++# h2h_report.py reads both. One output directory per config under
++# /root/h2h/out/t4/, named like results/head-to-head-a10/:
++#
++#   qvac-q4km-cram0-c8k-np8   the A10 shape: 7000+512, 8 slots x 8192
++#   qvac-q4km-cram0-c8k-np5   the ACA shape: 5 slots x 8192 (+ devops suites)
++#   qvac-q4km-cram0-c4k-np8   4k context: 3500+512, 8 slots x 4096
++#   vllm-c8k-u090 / -u085     vLLM AWQ at 8192, 0.90 and 0.85 utilisation
++#   vllm-c4k-u085             vLLM AWQ at 4096, 0.85 (the ACA handoff value)
++#
++#   bash scripts/t4_suites.sh qvac | vllm | all
++# Run from a FILE under setsid nohup (docs/VAST_AI_OPERATIONS.md §7).
++set -uo pipefail
++H2H=/root/h2h; REPO=/root/repo; O=$H2H/out/t4; Q4=/root/models/Qwen3-8B-Q4_K_M.gguf
++mkdir -p "$O"
++# shellcheck disable=SC1091
++. $H2H/env.sh
++export GGUF=$Q4 FA=${FA:-auto}
++step() { echo "STEP $* $(date -u +%T)"; }
++
++# run NAME ENGINE CTX PROMPT_TOKENS NP UTIL SUITES -- engine flags
++run() {
++  local name=$1 e=$2 ctx=$3 pt=$4 np=$5 util=$6 suites=$7; shift 8
++  step "$name up"
++  CTX=$ctx NP=$np VLLM_GPU_UTIL=$util bash $REPO/scripts/h2h_serve.sh start "$e" "$name" "$@" > /dev/null
++  for _ in $(seq 1 6000); do curl -sf localhost:8000/health > /dev/null && break; sleep 0.2; done
++  if ! curl -sf localhost:8000/health > /dev/null; then
++    echo "  $name did not come up"; tail -20 $H2H/logs/$name.log; return 1
++  fi
++  mkdir -p "$O/$name"
++  cp $H2H/run/$name.cmd "$O/$name/" 2>/dev/null
++  CTX=$ctx PROMPT_TOKENS=$pt bash $REPO/scripts/h2h_bench.sh "$O/$name" $suites > "$O/$name/bench.out" 2>&1
++  cp $H2H/logs/$name.log "$O/$name/server.log"
++  grep -ihE 'flash' $H2H/logs/$name.log | head -5 > "$O/$name/flash_attn.txt"
++  bash $REPO/scripts/h2h_serve.sh stop > /dev/null
++  step "$name done"
++}
++
++qvac() {
++  run qvac-q4km-cram0-c8k-np8 qvac 8192 7000 8 - "smoke A_warm_short A_cold_short F_cross E_sat" -- -cram 0
++  run qvac-q4km-cram0-c8k-np5 qvac 8192 7000 5 - "smoke A_warm_short A_cold_short devops_warm devops_cold" -- -cram 0
++  run qvac-q4km-cram0-c4k-np8 qvac 4096 3500 8 - "smoke A_warm_short A_cold_short" -- -cram 0
++}
++vllm() {
++  run vllm-c8k-u090 vllm 8192 7000 0 0.90 "smoke A_warm_short A_cold_short F_cross E_sat" -- --dtype half
++  run vllm-c8k-u085 vllm 8192 7000 0 0.85 "smoke A_warm_short A_cold_short devops_warm devops_cold" -- --dtype half
++  run vllm-c4k-u085 vllm 4096 3500 0 0.85 "smoke A_warm_short A_cold_short" -- --dtype half
++}
++
++# Single configs, for resuming a partial run without repeating finished ones.
++vllm_c8k_u085() { run vllm-c8k-u085 vllm 8192 7000 0 0.85 "${SUITES:-smoke A_warm_short A_cold_short devops_warm devops_cold}" -- --dtype half; }
++vllm_c4k_u085() { run vllm-c4k-u085 vllm 4096 3500 0 0.85 "${SUITES:-smoke A_warm_short A_cold_short}" -- --dtype half; }
++
++# Night-3 extras: isolation probes and repeats (docs/T4_HANDOFF.md to-do 4 and 5).
++# FA on/off for QVAC at 8k, vLLM FLEX_ATTENTION at 8k and 1k, second runs of the headline rows.
++extras_fa() {
++  FA=on  run qvac-c8k-np8-fa-on  qvac 8192 7000 8 - "smoke A_warm_short" -- -cram 0
++  FA=off run qvac-c8k-np8-fa-off qvac 8192 7000 8 - "smoke A_warm_short" -- -cram 0
++}
++extras_flex() {
++  run vllm-c8k-u085-flex vllm 8192 7000 0 0.85 "smoke A_warm_short" -- --dtype half --attention-backend FLEX_ATTENTION
++  run vllm-c1k-u085-flex vllm 1024 500 0 0.85 "smoke A_warm_short" -- --dtype half --attention-backend FLEX_ATTENTION
++}
++extras_rep() {
++  run vllm-c8k-u085-rep2 vllm 8192 7000 0 0.85 "devops_warm" -- --dtype half
++  run qvac-q4km-cram0-c8k-np5-rep2 qvac 8192 7000 5 - "devops_warm" -- -cram 0
++  run vllm-c1k-u085-rep2 vllm 1024 500 0 0.85 "A_warm_short" -- --dtype half
++  run qvac-q4km-cram0-c1k-np8-rep2 qvac 1024 500 8 - "A_warm_short" -- -cram 0
++}
++
++case "${1:-}" in
++  extras-fa) extras_fa ;; extras-flex) extras_flex ;; extras-rep) extras_rep ;;
++  qvac) qvac ;; vllm) vllm ;; all) qvac; vllm ;;
++  vllm-c8k-u085) vllm_c8k_u085 ;;   # SUITES="smoke A_warm_short devops_warm devops_cold" to skip cold
++  vllm-c4k-u085) vllm_c4k_u085 ;;
++  *) echo "usage: $0 {qvac|vllm|all|vllm-c8k-u085|vllm-c4k-u085}" >&2; exit 2 ;;
++esac
++step SUITES_DONE
+diff --git a/scripts/t4_sweep.sh b/scripts/t4_sweep.sh
+new file mode 100755
+index 0000000..21a7007
+--- /dev/null
++++ b/scripts/t4_sweep.sh
+@@ -0,0 +1,82 @@
++#!/usr/bin/env bash
++# T4 fit sweep: does Qwen3-8B load, and what does it cost in VRAM, at 8k and 4k
++# context per sequence? Run from a FILE on the box (docs/VAST_AI_OPERATIONS.md §7),
++# after `t4_box.sh setup` (QVAC built for sm_75, GGUF on disk, env.sh written).
++#
++#   bash scripts/t4_sweep.sh qvac     QVAC at 8k x {8,5} and 4k x {12,8,5} slots, f16 and q8_0 KV
++#   bash scripts/t4_sweep.sh vllm     vLLM AWQ at max-model-len {8192,4096}, util {0.85,0.90}
++#   bash scripts/t4_sweep.sh all
++#
++# Each config is started, given one real 1-token completion (so lazily
++# allocated buffers are counted), sampled with nvidia-smi, then stopped. One
++# JSON line per config goes to $O/sweep.jsonl:
++#   {engine, name, ctx, np, kv, util, status, vram_mib, vram_total_mib,
++#    t_health_s, note}
++# status is up | failed | oom. The point is the failures as much as the fits:
++# they say which configs to drop before the full suites are run.
++set -uo pipefail
++H2H=/root/h2h; REPO=/root/repo; O=$H2H/out/t4; Q4=/root/models/Qwen3-8B-Q4_K_M.gguf
++mkdir -p "$O" "$H2H/logs"
++# shellcheck disable=SC1091
++. $H2H/env.sh
++export GGUF=$Q4 FA=${FA:-auto}
++TOTAL=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
++
++try() {  # try ENGINE NAME CTX NP KV UTIL TIMEOUT [engine flags...]
++  local e=$1 n=$2 ctx=$3 np=$4 kv=$5 util=$6 to=$7; shift 7
++  local t0 status=up note="" vram="" t_health=""
++  t0=$(date +%s.%N)
++  CTX=$ctx NP=$np VLLM_GPU_UTIL=$util bash $REPO/scripts/h2h_serve.sh start "$e" "$n" "$@" > /dev/null
++  local deadline=$(( $(date +%s) + to ))
++  until curl -sf localhost:8000/health > /dev/null; do
++    sleep 0.5
++    if ! kill -0 "$(cat $H2H/run/engine.pid 2>/dev/null)" 2>/dev/null; then status=failed; break; fi
++    [ "$(date +%s)" -gt "$deadline" ] && { status=failed; note="timeout ${to}s"; break; }
++  done
++  if [ "$status" = up ]; then
++    t_health=$(python3 -c "import time;print(round(time.time()-$t0,2))")
++    curl -s -m 120 -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json' \
++      -d '{"model":"qwen3-8b","messages":[{"role":"user","content":"Say hi."}],"max_tokens":1}' \
++      localhost:8000/v1/chat/completions > /dev/null
++    sleep 2
++    vram=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
++  fi
++  if grep -qiE 'out of memory|OOM|cudaMalloc failed|failed to allocate' $H2H/logs/$n.log 2>/dev/null; then
++    [ "$status" = failed ] && status=oom
++    note="$note $(grep -iE 'out of memory|OOM|cudaMalloc failed|failed to allocate|available KV cache' $H2H/logs/$n.log | head -2 | tr '\n' ' ' | tr '"' "'")"
++  fi
++  # vLLM's own KV sizing and QVAC's flash-attention decision, in the engine's words.
++  grep -ihE 'GPU KV cache size|Maximum concurrency' $H2H/logs/$n.log 2>/dev/null | head -2 > $O/$n.kv.txt
++  grep -ihE 'flash' $H2H/logs/$n.log 2>/dev/null | head -3 > $O/$n.flash.txt
++  note="$note $(cat $O/$n.kv.txt 2>/dev/null | tr '\n' ' ' | tr '"' "'")"
++  printf '{"engine":"%s","name":"%s","ctx":%s,"np":%s,"kv":"%s","util":"%s","status":"%s","vram_mib":%s,"vram_total_mib":%s,"t_health_s":%s,"note":"%s"}\n' \
++    "$e" "$n" "$ctx" "$np" "$kv" "$util" "$status" "${vram:-null}" "$TOTAL" "${t_health:-null}" "$(echo $note)" | tee -a $O/sweep.jsonl
++  cp $H2H/logs/$n.log $O/$n.server.log 2>/dev/null
++  bash $REPO/scripts/h2h_serve.sh stop > /dev/null
++}
++
++qvac() {
++  # ctx np kv
++  for cfg in "8192 8 f16" "8192 5 f16" "8192 8 q8_0" "8192 5 q8_0" \
++             "4096 12 f16" "4096 8 f16" "4096 5 f16" "4096 12 q8_0"; do
++    set -- $cfg
++    kvflags=(); [ "$3" = q8_0 ] && kvflags=(-ctk q8_0 -ctv q8_0)
++    try qvac "sw-qvac-c$1-np$2-$3" "$1" "$2" "$3" "-" 300 -cram 0 ${kvflags[@]+"${kvflags[@]}"}
++  done
++}
++
++vllm() {
++  # ctx util. AWQ on Turing: --dtype half (no bf16), no forced FlashAttention-2.
++  for cfg in "8192 0.85" "8192 0.90" "4096 0.85" "4096 0.90"; do
++    set -- $cfg
++    try vllm "sw-vllm-c$1-u$2" "$1" 0 "awq" "$2" 1500 --dtype half
++  done
++}
++
++case "${1:-}" in
++  qvac) qvac ;;
++  vllm) vllm ;;
++  all)  qvac; vllm ;;
++  *) echo "usage: $0 {qvac|vllm|all}" >&2; exit 2 ;;
++esac
++echo "SWEEP_DONE $(date -u +%T)"
+diff --git a/scripts/verify_box.sh b/scripts/verify_box.sh
+index 1aca7d5..8f98475 100755
+--- a/scripts/verify_box.sh
++++ b/scripts/verify_box.sh
+@@ -276,6 +276,7 @@ case "$name" in
+   *L4*)   bad  "card is '$name' (L4, not A10) -- Ada generation, different memory budget entirely" ;;
+   *3090*) warn "card is '$name' -- PLACEHOLDER for a first-pass build/function check when no A10 is rentable (~936 GB/s vs A10's ~600); tok/s will NOT transfer to the A10 baseline" ;;
+   *A10*)  pass "card is '$name'" ;;
++  *T4*)   warn "card is '$name' -- the ACA POC card (Turing sm_75, ~320 GB/s, 16 GB, no bf16); numbers are T4 numbers, label them so, and do not mix them with the A10 tables" ;;
+   *)      bad  "card is '$name' -- not an A10; PRD §3.3 does not apply" ;;
+ esac
+ 
+@@ -288,6 +289,8 @@ esac
+ # original vLLM derivation this needs to be redone against.
+ mib=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
+ if   [ "$mib" -ge 22000 ]; then pass "VRAM ${mib} MiB (full 24 GB card)"
++elif [ "$mib" -ge 15000 ] && case "$name" in *T4*) true ;; *) false ;; esac; then
++  warn "VRAM ${mib} MiB (T4, 16 GB card): 8k x 5 slots is the fit question the T4 sweep answers"
+ elif [ "$mib" -ge 11000 ]; then bad "VRAM ${mib} MiB -- looks like a HALF card. 5x8k context is unreachable (PRD §4.4a)"
+ else                            bad "VRAM ${mib} MiB -- partitioned card, weights may not even fit"
+ fi

@@ -1,0 +1,7 @@
+calibrated: 7000 prompt tokens (target 7000) with 6970 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      26.84   26.84    26.62    26.84     194.99   194.99     56.34   99.8    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c8k-np5/smoke.jsonl

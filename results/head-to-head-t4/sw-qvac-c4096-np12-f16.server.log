@@ -1,0 +1,16 @@
+0.00.050.073 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.240.514 I srv    load_model: loading model '/root/models/Qwen3-8B-Q4_K_M.gguf'
+0.00.633.019 I cmn  common_init_: fit completed in 0.39 seconds: n_gpu_layers = 99, n_ctx = 49152, moe_cache_size = 0, prefetch_weights = off
+0.00.843.275 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.975.043 I cmn          init: llama threadpool init, n_threads = 36
+0.02.165.860 I srv    load_model: initializing, n_slots = 12, n_ctx_slot = 4096, kv_unified = 'false'
+0.02.166.125 W srv          init: --cache-idle-slots requires --cache-ram, disabling
+0.02.178.243 I srv  llama_server: model loaded
+0.02.178.252 I srv  llama_server: listening on http://127.0.0.1:8000
+0.02.715.578 I slot get_availabl: id 11 | task -1 | selected slot by LRU, t_last = -1
+0.02.715.726 I slot launch_slot_: id 11 | task 0 | processing task, is_child = 0
+0.02.770.504 I slot print_timing: id 11 | task 0 | prompt eval time =      54.72 ms /    11 tokens (    4.97 ms per token,   201.02 tokens per second)
+0.02.770.510 I slot print_timing: id 11 | task 0 |        eval time =       0.00 ms /     1 tokens (    0.00 ms per token,     0.00 tokens per second)
+0.02.770.511 I slot print_timing: id 11 | task 0 |       total time =      54.72 ms /    12 tokens
+0.02.770.517 I slot print_timing: id 11 | task 0 |    graphs reused =          1
+0.02.770.564 I slot      release: id 11 | task 0 | stop processing: n_tokens = 11, truncated = 0

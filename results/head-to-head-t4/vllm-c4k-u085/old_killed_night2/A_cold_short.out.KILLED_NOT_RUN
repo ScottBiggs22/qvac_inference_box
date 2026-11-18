@@ -1,0 +1,5 @@
+calibrated: 3500 prompt tokens (target 3500) with 3459 filler words, 3 probes
+warmup: 2 request(s), excluded from all statistics
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------

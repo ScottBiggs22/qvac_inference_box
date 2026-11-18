@@ -1,0 +1,5 @@
+  family     vllm-awq-t4    qvac-q4km-t4
+  answer           31/40           33/40
+    json             5/5             5/5
+    tool             0/5             5/5
+exact-text agreement vllm-awq-t4 vs qvac-q4km-t4 (answer family): 31/40

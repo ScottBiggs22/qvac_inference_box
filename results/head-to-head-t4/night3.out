@@ -1,0 +1,33 @@
+STEP qvac boot timings 15:49:39
+STEP qvac quality 15:49:52
+STEP vllm boot timings 15:50:18
+STEP vllm quality 15:56:08
+STEP PARITY_DONE 15:57:54
+PARITY_EXIT=0
+STEP vllm-c4k-u085 up 15:57:54
+STEP vllm-c4k-u085 done 16:24:42
+STEP SUITES_DONE 16:24:42
+C4KCOLD_EXIT=0
+STEP vllm-c8k-u085-flex up 16:24:42
+STEP vllm-c8k-u085-flex done 16:58:44
+STEP vllm-c1k-u085-flex up 16:58:44
+STEP vllm-c1k-u085-flex done 17:11:58
+STEP SUITES_DONE 17:11:58
+FLEX_EXIT=0
+STEP qvac-c8k-np8-fa-on up 17:11:58
+STEP qvac-c8k-np8-fa-on done 17:30:24
+STEP qvac-c8k-np8-fa-off up 17:30:24
+STEP qvac-c8k-np8-fa-off done 17:56:34
+STEP SUITES_DONE 17:56:34
+FA_EXIT=0
+STEP vllm-c8k-u085-rep2 up 17:56:34
+STEP vllm-c8k-u085-rep2 done 18:12:27
+STEP qvac-q4km-cram0-c8k-np5-rep2 up 18:12:27
+STEP qvac-q4km-cram0-c8k-np5-rep2 done 18:33:09
+STEP vllm-c1k-u085-rep2 up 18:33:09
+STEP vllm-c1k-u085-rep2 done 18:42:50
+STEP qvac-q4km-cram0-c1k-np8-rep2 up 18:42:50
+STEP qvac-q4km-cram0-c1k-np8-rep2 done 18:56:15
+STEP SUITES_DONE 18:56:15
+REP_EXIT=0
+NIGHT3_EXIT

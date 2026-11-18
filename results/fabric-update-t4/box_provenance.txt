@@ -1,0 +1,2 @@
+Tesla T4, 580.178.04, 7.5
+vast.ai machine 155649 (Texas), contract 61300074, image vllm/vllm-openai:v0.28.0, 7.7 effective cores (cpu.max 768000 100000)

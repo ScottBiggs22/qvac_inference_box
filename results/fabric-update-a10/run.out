@@ -1,0 +1,23 @@
+STEP 1 old A 16:51:31
+  old-a up (qvac-old): 14051 MiB
+  bench old-cram0-a smoke A_warm_short A_cold_short: done
+STEP 2 new A 17:07:55
+  new-a up (qvac-new): 14067 MiB
+  bench new-cram0-a smoke A_warm_short A_cold_short: done
+STEP 3 new B 17:21:21
+  new-b up (qvac-new): 14067 MiB
+  bench new-cram0-b A_warm_short A_cold_short: done
+STEP 4 old B 17:34:59
+  old-b up (qvac-old): 14051 MiB
+  bench old-cram0-b A_warm_short A_cold_short: done
+STEP 5 new, NVRTC fusion off 17:50:59
+  new-nofusion up (qvac-new): 14059 MiB
+  bench new-cram0-nofusion A_warm_short: done
+STEP 6 new, default flags 17:55:52
+  new-default up (qvac-new): 14067 MiB
+  bench new-default A_warm_short: done
+STEP 7 new, quality 18:01:17
+  new-quality up (qvac-new): 14067 MiB
+  quality done
+  nvrtc cached kernels: 6
+STEP ALL_DONE 18:01:30

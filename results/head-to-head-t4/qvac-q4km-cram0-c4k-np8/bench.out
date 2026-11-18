@@ -1,0 +1,34 @@
+=== smoke  2026-10-31T02:48:23Z
+calibrated: 3500 prompt tokens (target 3500) with 3470 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      28.05   28.05    27.85    28.05     164.66   164.66     40.75   99.5    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c4k-np8/smoke.jsonl
+=== smoke done rc=0  2026-10-31T02:48:46Z
+=== A_warm_short  2026-10-31T02:48:46Z
+calibrated: 3500 prompt tokens (target 3500) with 3470 filler words, 3 probes
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0      28.06   27.98    27.85    27.84     174.09   175.92     48.86   99.5    0
+    5   0      12.42   12.39    61.48    61.52     479.19   516.23    238.08   99.5    0
+    8   0       8.99    8.96    71.19    71.22     693.46   760.52    271.95   99.5    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c4k-np8/A_warm_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 12.42 tok/s/user, prompt=3500 tokens, cache=warm)
+=== A_warm_short done rc=0  2026-10-31T03:03:02Z
+=== A_cold_short  2026-10-31T03:03:02Z
+calibrated: 3500 prompt tokens (target 3500) with 3459 filler words, 3 probes
+warmup: 2 request(s), excluded from all statistics
+
+ conc rep   per-user     p05     aggr   steady   TTFT p50      p95   prefill cache% fail
+------------------------------------------------------------------------------------------------
+    1   0       28.0   27.95    23.37    23.99     3672.5  3678.22   3553.77    0.1    0
+    5   0        8.2    6.72    35.85    37.05    9106.06 17810.58   3775.67    0.1    0
+    8   0       6.67    6.46    47.62    49.48    9336.47 26474.09   3833.07    0.1    0
+
+wrote /root/h2h/out/t4/qvac-q4km-cram0-c4k-np8/A_cold_short.jsonl
+R1 gate (>=20 tok/s/user at 5 concurrent): NOT MET (worst repeat 8.2 tok/s/user, prompt=3500 tokens, cache=cold)
+=== A_cold_short done rc=0  2026-10-31T03:21:59Z
