@@ -1,0 +1,6 @@
+[90mHint: A new version of huggingface_hub (2.4.0) is available! You are using version 1.28.0.
+To update, run: hf update[0m
+[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g --claude` to teach your AI agents how to use the `hf` CLI.[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[32m✓ Downloaded[0m
+  path: /root/models/Qwen3-8B-Q4_K_M.gguf

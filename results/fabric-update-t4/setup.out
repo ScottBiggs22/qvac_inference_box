@@ -1,0 +1,9 @@
+STEP setup 18:26:22
+W: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+debconf: delaying package configuration, since apt-utils is not installed
+debconf: delaying package configuration, since apt-utils is not installed
+  qvac-old build rc=0
+  qvac-new build rc=0
+  d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785  /root/models/Qwen3-8B-Q4_K_M.gguf
+  Q4_K_M sha ok
+STEP SETUP_DONE 18:52:06

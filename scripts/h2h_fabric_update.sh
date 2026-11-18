@@ -3,7 +3,7 @@
 # the build every QVAC number in this repo came from (7bb2161, build 9240), on
 # one A10 in the vllm/vllm-openai:v0.28.0 image (CUDA 13.0 nvcc).
 # Plan: ~/.claude/plans/lets-rerun-a-limited-federated-cocke.md; write-up in
-# docs/FABRIC_UPDATE_A10.md. Modelled on h2h_q8_rerun.sh.
+# docs/FABRIC_UPDATE.md. Modelled on h2h_q8_rerun.sh.
 #
 # Run from a FILE on the box, under setsid nohup (docs/VAST_AI_OPERATIONS.md §7):
 #   bash scripts/h2h_fabric_update.sh setup   apt, both builds, Q4_K_M, env.sh
@@ -25,6 +25,9 @@ OLD_SHA=7bb2161c690befa1bb44ff9b20e4eea2da6c22b8
 NEW_SHA=2aa8dbece6895c237a1deb19aef0dfc05e3a19df   # tag v11739.4.0
 OLD_BIN=/root/qvac-old/build/bin/llama-server
 NEW_BIN=/root/qvac-new/build/bin/llama-server
+# ARCH=75 for a T4 (native build, as in the earlier T4 runs). TRIM=1 drops rows
+# 5 (NVRTC fusion off) and 7 (quality), which are engine-level and settled on the A10.
+ARCH=${ARCH:-86}; TRIM=${TRIM:-0}
 mkdir -p $H2H/run $H2H/logs $O /root/models
 step() { echo "STEP $* $(date -u +%T)"; }
 
@@ -32,13 +35,13 @@ build() {  # build DIR SHA [extra cmake flags]
   local d=$1 sha=$2 n; n=$(basename "$d"); shift 2
   [ -d "$d" ] || git clone -q https://github.com/tetherto/qvac-fabric-llm.cpp "$d"
   ( cd "$d" && git fetch -q origin "$sha" 2>/dev/null; git checkout -q "$sha" && rm -rf build \
-    && cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86 -DCMAKE_BUILD_TYPE=Release -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF "$@" \
+    && cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=$ARCH -DCMAKE_BUILD_TYPE=Release -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF "$@" \
          > $H2H/logs/configure-$n.log 2>&1 \
     && /usr/bin/time -v cmake --build build --config Release -j "$(nproc)" --target llama-server \
          > $H2H/logs/build-$n.log 2>&1 )
   local rc=$?
   echo "  $n build rc=$rc"
-  { echo "== $n @ $sha  flags: -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86 -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF $*"
+  { echo "== $n @ $sha  flags: -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=$ARCH -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF $*"
     "$d/build/bin/llama-server" --version 2>&1 | head -3
     grep -E 'Elapsed \(wall' $H2H/logs/build-$n.log; } >> $O/build_provenance.txt
   return $rc
@@ -88,13 +91,17 @@ case "${1:-}" in
     up $NEW_BIN new-b -cram 0 && bench $O/new-cram0-b A_warm_short A_cold_short
     step "4 old B"
     up $OLD_BIN old-b -cram 0 && bench $O/old-cram0-b A_warm_short A_cold_short
-    step "5 new, NVRTC fusion off"
-    GGML_CUDA_NVRTC_FUSION=0 up $NEW_BIN new-nofusion -cram 0 && bench $O/new-cram0-nofusion A_warm_short
+    if [ "$TRIM" != 1 ]; then
+      step "5 new, NVRTC fusion off"
+      GGML_CUDA_NVRTC_FUSION=0 up $NEW_BIN new-nofusion -cram 0 && bench $O/new-cram0-nofusion A_warm_short
+    fi
     step "6 new, default flags"
     up $NEW_BIN new-default && bench $O/new-default A_warm_short
-    step "7 new, quality"
-    up $NEW_BIN new-quality && python3 $REPO/scripts/h2h_quality.py run --label qvac-new --api-key "$API_KEY" \
-      -o $O/new-quality.jsonl > $H2H/logs/quality.log 2>&1 && echo "  quality done"
+    if [ "$TRIM" != 1 ]; then
+      step "7 new, quality"
+      up $NEW_BIN new-quality && python3 $REPO/scripts/h2h_quality.py run --label qvac-new --api-key "$API_KEY" \
+        -o $O/new-quality.jsonl > $H2H/logs/quality.log 2>&1 && echo "  quality done"
+    fi
     bash $REPO/scripts/h2h_serve.sh stop > /dev/null
     cp $H2H/run/*.cmd $O/ 2>/dev/null; mkdir -p $O/logs; cp $H2H/logs/*.log $O/logs/ 2>/dev/null
     ls ~/.cache/ggml-nvrtc 2>/dev/null | wc -l | sed 's/^/  nvrtc cached kernels: /'

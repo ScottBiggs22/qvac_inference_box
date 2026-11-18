@@ -1,5 +1,7 @@
 # T4 results: QVAC (llama-server, Q4_K_M) vs vLLM (AWQ) on one Tesla T4
 
+> **Addendum (2026-11-18):** the current QVAC Fabric (`v11739.4.0`, build 12847) is only +7–14% on the T4 (one same-box pair), against +31–53% on the A10. The decision guide below is unchanged. See `docs/FABRIC_UPDATE.md` (T4 follow-up).
+
 Status: **complete** (2026-11-03). Qwen3-8B, one vast.ai Tesla T4 (15,360 MiB, Turing sm_75, fp16 only), same harness and suites as the A10 head-to-head
 (`docs/HEAD_TO_HEAD.md`). The full tables are in HEAD_TO_HEAD.md §16; this page is the summary and the decision guide. Raw data: `results/head-to-head-t4/`.
 Rented boxes, mostly single runs (spread about 10%, up to about 25% at 1 user): re-confirm on the real ACA T4 before sizing production.

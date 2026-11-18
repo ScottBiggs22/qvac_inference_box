@@ -1,0 +1,9 @@
+STEP 1 old A 18:55:25
+  old-a up (qvac-old): 13903 MiB
+  bench old-cram0-a smoke A_warm_short A_cold_short: done
+STEP 2 new A 19:41:32
+  new-a up (qvac-new): 13919 MiB
+  bench new-cram0-a smoke A_warm_short A_cold_short: done
+STEP 3 new B 20:24:40
+  new-b up (qvac-new): 13919 MiB
+STOPPED_BY_OPERATOR after round 2 (budget) 20:26:27
